@@ -158,6 +158,69 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isSimulatingOffline, setIsSimulatingOffline] = useState<boolean>(false);
   const [isTelegramMode, setIsTelegramMode] = useState<boolean>(true);
 
+  // Initial fetch from backend API if running
+  useEffect(() => {
+    const loadBackendData = async () => {
+      try {
+        const [lecRes, mentorRes, chatRes, repRes] = await Promise.allSettled([
+          fetch('/api/lectures').then(r => r.ok ? r.json() : null),
+          fetch('/api/mentors').then(r => r.ok ? r.json() : null),
+          fetch('/api/chat').then(r => r.ok ? r.json() : null),
+          fetch('/api/reports').then(r => r.ok ? r.json() : null)
+        ]);
+
+        if (lecRes.status === 'fulfilled' && Array.isArray(lecRes.value) && lecRes.value.length > 0) {
+          setHardLectures(lecRes.value);
+        }
+        if (mentorRes.status === 'fulfilled' && Array.isArray(mentorRes.value) && mentorRes.value.length > 0) {
+          setMentors(mentorRes.value);
+        }
+        if (chatRes.status === 'fulfilled' && Array.isArray(chatRes.value) && chatRes.value.length > 0) {
+          setChatMessages(chatRes.value);
+        }
+        if (repRes.status === 'fulfilled' && Array.isArray(repRes.value) && repRes.value.length > 0) {
+          setReports(repRes.value);
+        }
+      } catch {
+        // Fallback to local storage gracefully
+      }
+    };
+
+    loadBackendData();
+  }, []);
+
+  // WebSocket connection for live sync
+  useEffect(() => {
+    let ws: WebSocket | null = null;
+    try {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${protocol}//${window.location.host}/ws`;
+      ws = new WebSocket(wsUrl);
+
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.type === 'LECTURE_BOOKED' || data.type === 'LECTURE_CANCELLED' || data.type === 'LECTURE_CREATED') {
+            fetch('/api/lectures').then(r => r.json()).then(lecs => setHardLectures(lecs)).catch(() => {});
+          } else if (data.type === 'CHAT_MESSAGE') {
+            setChatMessages(prev => {
+              if (prev.some(m => m.id === data.payload.id)) return prev;
+              return [...prev, data.payload];
+            });
+          }
+        } catch {
+          // ignore
+        }
+      };
+    } catch {
+      // ignore
+    }
+
+    return () => {
+      ws?.close();
+    };
+  }, []);
+
   // Sync to local storage
   useEffect(() => {
     localStorage.setItem('aitu_role', role);
@@ -242,6 +305,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         assignedMentees: m.id === mentorId ? m.assignedMentees + 1 : m.assignedMentees
       }))
     );
+    fetch('/api/mentors/select', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mentorId })
+    }).catch(() => {});
+
     triggerHaptic('success');
     triggerConfetti();
   };
@@ -269,6 +338,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return lec;
       })
     );
+
+    fetch(`/api/lectures/${lectureId}/book`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ studentId: '254977', studentName: 'Birzhan Zhanbolatuly' })
+    }).catch(() => {});
+
     triggerHaptic('success');
     triggerConfetti();
   };
@@ -288,6 +364,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return lec;
       })
     );
+
+    fetch(`/api/lectures/${lectureId}/book`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ studentId: '254977' })
+    }).catch(() => {});
+
     if (selectedTicketLecture?.id === lectureId) {
       setSelectedTicketLecture(null);
     }
@@ -304,6 +387,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       registeredStudents: []
     };
     setHardLectures(prev => [newLec, ...prev]);
+
+    fetch('/api/lectures', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(lectureData)
+    }).catch(() => {});
+
     triggerHaptic('success');
     triggerConfetti();
   };
@@ -329,6 +419,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return lec;
       })
     );
+
+    fetch(`/api/lectures/${lectureId}/checkin`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ studentId })
+    }).catch(() => {});
+
     triggerHaptic('success');
     triggerConfetti();
   };
@@ -365,6 +462,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       hasUnseen: true
     };
     setStories(prev => [newStory, ...prev.filter(s => s.id !== 's-1')]);
+
+    fetch('/api/stories', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newStoryData)
+    }).catch(() => {});
+
     triggerHaptic('success');
     triggerConfetti();
   };
@@ -433,6 +537,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setChatMessages(prev => [...prev, myMsg]);
     triggerHaptic('light');
 
+    fetch('/api/chat/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(myMsg)
+    }).catch(() => {});
+
     setTimeout(() => {
       const replyMsg: ChatMessage = {
         id: `msg-reply-${Date.now()}`,
@@ -457,6 +567,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       submittedAt: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
     };
     setReports(prev => [newRep, ...prev]);
+
+    fetch('/api/reports', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(reportData)
+    }).catch(() => {});
+
     triggerHaptic('success');
     triggerConfetti();
   };

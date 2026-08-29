@@ -1,12 +1,31 @@
 services:
-  aitu-mentorship:
+  # Fastify + SQLite Backend API
+  aitu-mentorship-api:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: aitu-mentorship-api
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./server/data:/app/data
+    environment:
+      - NODE_ENV=production
+      - PORT=5000
+      - HOST=0.0.0.0
+
+  # Nginx + React Frontend Web & TMA
+  aitu-mentorship-web:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: aitu-mentorship-app
+    container_name: aitu-mentorship-web
     restart: unless-stopped
     ports:
       - "8080:80"
+    depends_on:
+      - aitu-mentorship-api
     environment:
       - NODE_ENV=production
     healthcheck:
