@@ -136,7 +136,7 @@ SM/
 
 ### 2. Installation
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/Diasb4/SM1
 cd SM
 npm install
 ```
