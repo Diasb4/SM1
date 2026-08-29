@@ -6,6 +6,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue.svg?style=flat&logo=typescript)](https://www.typescriptlang.org/)
 [![Vite](https://img.shields.io/badge/Vite-6.1-purple.svg?style=flat&logo=vite)](https://vitejs.dev/)
 [![Tailwind CSS](https://img.shields.io/badge/TailwindCSS-3.4-38B2AC.svg?style=flat&logo=tailwind-css)](https://tailwindcss.com/)
+[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg?style=flat&logo=docker)](https://www.docker.com/)
 [![Telegram Mini App](https://img.shields.io/badge/Telegram-Mini_App_Ready-2CA5E0.svg?style=flat&logo=telegram)](https://core.telegram.org/bots/webapps)
 
 ---
@@ -29,6 +30,29 @@ The **AITU Mentorship Platform** bridges the gap between first/second-year stude
    - Native integration with Telegram WebApp SDK (`window.Telegram.WebApp`).
    - Tactile Haptic Feedback on seat bookings and check-ins.
    - Zero-barrier onboarding straight from the official university bot (`@aitumentor_bot`).
+
+---
+
+## 🐳 Docker Deployment
+
+The application includes a production-ready **multi-stage Docker setup** with an optimized Nginx web server, Gzip compression, and SPA routing fallback.
+
+### Running with Docker Compose:
+
+```bash
+# 1. Start Docker Desktop (if not already running)
+
+# 2. Build and launch the container in the background
+docker compose up --build -d
+
+# 3. Open in browser:
+http://localhost:8080
+```
+
+### Stopping the container:
+```bash
+docker compose down
+```
 
 ---
 
@@ -66,6 +90,7 @@ The **AITU Mentorship Platform** bridges the gap between first/second-year stude
 | :--- | :--- |
 | **Frontend Framework** | [React 18](https://react.dev/) + [TypeScript](https://www.typescriptlang.org/) |
 | **Build Tool** | [Vite 6](https://vitejs.dev/) |
+| **Container & Production Server** | [Docker](https://www.docker.com/) + [Nginx Alpine](https://nginx.org/) |
 | **Styling & Design System** | [Tailwind CSS](https://tailwindcss.com/) with pastel tokens & smooth micro-animations |
 | **Icons** | [Lucide React](https://lucide.dev/) |
 | **Telegram Integration** | [Telegram WebApp SDK](https://core.telegram.org/bots/webapps) |
@@ -78,92 +103,40 @@ The **AITU Mentorship Platform** bridges the gap between first/second-year stude
 
 ```
 SM/
-├── public/
+├── Dockerfile                         # Multi-stage production container
+├── docker-compose.yml                 # Docker Compose orchestrator
+├── nginx.conf                         # High-performance SPA routing & Gzip
+├── .dockerignore                      # Docker build exclusions
 ├── src/
 │   ├── components/
-│   │   ├── layout/
-│   │   │   ├── BottomNav.tsx          # Role-aware bottom navigation
-│   │   │   └── DeviceFrame.tsx        # Mobile wrapper, TMA bar, and role switcher
-│   │   ├── lectures/
-│   │   │   ├── AttendanceTicketModal.tsx # QR Attendance Pass modal
-│   │   │   ├── HardMentorLecturesView.tsx # Lecturer desk & QR scanner
-│   │   │   └── LectureCatalogView.tsx # 100-seat academic lectures catalog
-│   │   ├── mentee/
-│   │   │   ├── ChatView.tsx           # Cohort chat
-│   │   │   ├── DailyCheckIn.tsx       # Mood tracking
-│   │   │   ├── EventsView.tsx         # Event checklist
-│   │   │   ├── HomeView.tsx           # Student home dashboard
-│   │   │   ├── MenteeProfileView.tsx  # Profile & Microsoft SSO
-│   │   │   ├── MentorCatalogView.tsx  # Soft mentor selection
-│   │   │   └── MentorDetailModal.tsx  # Mentor portfolio modal
-│   │   ├── mentor/
-│   │   │   ├── MentorCommunityView.tsx# Cohort signals & mentees grid
-│   │   │   ├── MentorEventsView.tsx   # Offline events creation
-│   │   │   ├── MentorProfileView.tsx  # Mentor profile & rating
-│   │   │   ├── MentorStoriesView.tsx  # Active stories manager
-│   │   │   └── WeeklyReportView.tsx   # DSEW reporting form
-│   │   ├── stories/
-│   │   │   ├── StoryCreatorModal.tsx  # Create photo/text story
-│   │   │   ├── StoryTray.tsx          # Stories avatar carousel
-│   │   │   └── StoryViewerModal.tsx   # Fullscreen story viewer
-│   │   └── system/
-│   │       ├── OfflineErrorView.tsx   # 503 error state
-│   │       ├── SkeletonView.tsx       # Shimmer loading skeleton
-│   │       └── TasksEmptyView.tsx     # Empty state
-│   ├── context/
-│   │   └── AppContext.tsx             # Global application state store
-│   ├── data/
-│   │   └── mockData.ts                # Mock cohorts, lectures, & mentors
-│   ├── types/
-│   │   └── index.ts                   # TypeScript interfaces
-│   ├── App.tsx                        # Main view router
-│   ├── index.css                      # Tailwind base & custom animations
-│   └── main.tsx                       # React DOM root
-├── index.html                         # PWA & Telegram WebApp HTML shell
+│   │   ├── layout/                    # Frame, TMA Bar, Bottom Navigation
+│   │   ├── lectures/                  # Hard Lectures & QR Attendance Tickets
+│   │   ├── mentee/                    # Student Home, Catalog, Profile, Chat
+│   │   ├── mentor/                    # Soft Mentor Dashboard & DSEW Reports
+│   │   ├── stories/                   # Story Player & Story Creator
+│   │   └── system/                    # Skeleton Loader & Error States
+│   ├── context/AppContext.tsx         # Global application state store
+│   ├── data/mockData.ts               # Mock cohorts, lectures, & mentors
+│   └── types/index.ts                 # TypeScript interfaces
 ├── package.json
 ├── tailwind.config.js
-├── tsconfig.json
 └── vite.config.ts
 ```
 
 ---
 
-## ⚡ Quick Start
+## ⚡ Local Development (Without Docker)
 
-### 1. Prerequisites
-- **Node.js** (v18.0.0 or later)
-- **npm** (v9.0.0 or later)
-
-### 2. Installation
+### 1. Installation
 ```bash
-git clone <your-repo-url>
-cd SM
 npm install
 ```
 
-### 3. Start Development Server
+### 2. Start Development Server
 ```bash
 npm run dev
 ```
 Open **[http://localhost:3000](http://localhost:3000)** in your browser.
-
-### 4. Build for Production
-```bash
-npm run build
-```
-
----
-
-## 🎮 Interactive Demo Controls
-
-When running locally, the top toolbar provides testing tools:
-* **Role Switcher**:
-  - `👨‍🎓 Mentee (Birzhan)`
-  - `👩‍🏫 Soft Mentor (Aizhan)`
-  - `📐 Hard Mentor (Ayan - Math)`
-* **Quick Screen Jump**: Jump directly to any of the 12+ screens in one click.
-* **TMA Toggle**: Switch between the **Telegram Mini App** container and standard Web/PWA frame.
-* **Device Mockup**: Toggle between phone frame and full-width responsive mode.
 
 ---
 
