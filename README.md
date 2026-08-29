@@ -129,6 +129,8 @@ SM/
 
 ### 1. Installation
 ```bash
+git clone https://github.com/Diasb4/SM1
+cd SM
 npm install
 ```
 
