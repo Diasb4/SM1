@@ -11,42 +11,44 @@
 
 ---
 
-## 🌟 Overview
+## 🌟 Key Capabilities & Ecosystem
 
-The **AITU Mentorship Platform** is a complete fullstack application featuring:
+1. **🌐 Multilingual Support (KZ / RU / EN)**:
+   - Complete i18n covering **Қазақ тілі**, **Русский язык**, and **English**.
+   - Instant language switcher in the TMA header and profile settings.
 
-1. **🌿 Soft Mentorship (Wellbeing & Adaptation)**:
-   - Cohorts of up to 24 mentees with senior soft mentors.
-   - Private daily mood check-ins (*"Just for you — nobody sees this unless you share it"*).
-   - 24h ephemeral Stories sharing campus updates and elective guidance.
-   - Qualitative weekly reporting directly to the university **DSEW** (*Department of Student Engagement & Wellbeing*).
-
-2. **📐 Hard Mentorship & Peer Tutoring (Academic Lectures)**:
+2. **📐 Hard Mentorship & Academic Tutoring (100-Seat Auditoriums)**:
    - Offline crash courses & exam reviews in large auditoriums (e.g. *Calculus 1 with Ayan in C1.3.250 on 100 seats*).
-   - Live seat capacity tracking and reservation system with WebSocket synchronization.
-   - **QR Attendance Pass**: Students claim an attendance ticket, scan it at the door with the lecturer, and earn **+50 Attendance Points** towards university grading.
+   - **Interactive Auditorium Visualizer**: View Front, Middle, and Back tiers with live seat availability.
+   - **Boarding-Pass Style QR Ticket**: Apple Wallet-styled pass with high-contrast matrix, barcode, and countdown timer to lecture start.
+   - **Lecturer Desk & Camera Scanner**: Fast QR viewfinder with audio-haptic confirmation, student search, and **CSV / Excel export for the Dean's Office**.
+   - **+50 Attendance Points**: Claimed points update the student's grading records in real time.
 
-3. **📱 Telegram Mini App (TMA)**:
+3. **🌿 Soft Mentorship (Wellbeing & Adaptation)**:
+   - Cohorts of up to 24 mentees with senior soft mentors.
+   - **📅 1-on-1 Advisory Scheduler**: Book 20-minute private chats (topics: *Electives, Exam Stress, Hackathons & Internships, Campus Life*).
+   - **🔥 Daily Mood Streak Tracker & 30-Day Pulse**: Interactive wellbeing calendar with streak counter and private reflection notes.
+   - **📊 DSEW Qualitative Reports & Sentiment Analytics**: Visual sentiment distribution (Positive, Neutral, Exam Stress) and printable report generator for the University administration.
+
+4. **✨ Ephemeral Stories & Cohort Chat**:
+   - 24h stories with photo uploads, custom gradients, and **interactive polls** (*"Attending Calculus midterm review?"*).
+   - Floating animated emoji reactions (`🔥`, `👏`, `❤️`, `💡`, `🎓`) and direct reply into cohort chat.
+   - Real-time chat with message search, message replies, emoji reactions, and Web Audio API synthesized sound effects.
+
+5. **📱 Telegram Mini App (TMA) Native Polish**:
    - Native integration with Telegram WebApp SDK (`window.Telegram.WebApp`).
-   - Tactile Haptic Feedback on seat bookings and check-ins.
-   - Zero-barrier onboarding straight from the official university bot (`@aitumentor_bot`).
-
-4. **⚡ Lightweight Backend & Database (Fastify + SQLite)**:
-   - High-performance SQLite database with WAL mode running in Docker.
-   - Real-time WebSockets for instant seat updates and cohort chat.
-   - Persistent storage in `./server/data/mentorship.db`.
+   - Tactile Haptic Feedback on seat bookings, check-ins, and reactions.
+   - Dark / Light Mode theme toggle matching Telegram color schemes.
 
 ---
 
 ## 🐳 Running with Docker (Frontend + Backend + SQLite)
 
 ```bash
-# 1. Start Docker Desktop (if on Windows/macOS)
-
-# 2. Build and launch all services in the background
+# 1. Build and launch all services in the background
 docker compose up --build -d
 
-# 3. Access the application:
+# 2. Access the application:
 # Frontend & TMA: http://localhost:8080
 # Backend API:    http://localhost:5000/api/health
 ```
@@ -87,16 +89,18 @@ docker compose down
 
 ---
 
-## 🚀 Key Features & Endpoints
+## 🚀 Key Endpoints
 
 | Category | Endpoint / Feature | Description |
 | :--- | :--- | :--- |
-| **Academic Lectures** | `GET /api/lectures` | List all 100-seat lectures with live booked counts |
-| **Seat Booking** | `POST /api/lectures/:id/book` | Reserve a seat and broadcast update via WebSocket |
+| **Academic Lectures** | `GET /api/lectures` | List all 100-seat lectures with live booked counts and tiers |
+| **Seat Booking** | `POST /api/lectures/:id/book` | Reserve seat tier and broadcast update via WebSocket |
 | **QR Check-In** | `POST /api/lectures/:id/checkin` | Lecturer scans student QR to award +50 attendance pts |
+| **1-on-1 Bookings** | `GET /api/bookings/one-on-one` | Retrieve scheduled advisory sessions with mentors |
+| **Book 1-on-1** | `POST /api/bookings/one-on-one` | Schedule private 20-min session (C1 Coworking, AkiTime, etc.) |
 | **Soft Mentors** | `GET /api/mentors` | Retrieve mentor portfolios & cohort quotas |
-| **Realtime Chat** | `GET /api/chat`, `POST /api/chat/messages` | Instant messaging across all students |
-| **DSEW Reports** | `GET /api/reports`, `POST /api/reports` | Submit weekly wellbeing pulse to university |
+| **Realtime Chat** | `GET /api/chat`, `POST /api/chat/messages` | Instant messaging across all students with replies |
+| **DSEW Reports** | `GET /api/reports`, `POST /api/reports` | Submit weekly wellbeing pulse and export summaries |
 
 ---
 

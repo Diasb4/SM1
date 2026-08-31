@@ -355,6 +355,7 @@ export const INITIAL_EVENTS: EventItem[] = [
 export const INITIAL_CHAT_MESSAGES: ChatMessage[] = [
   {
     id: 'msg-1',
+    roomId: 'room-cohort',
     senderId: 'ruslan',
     senderName: 'Ruslan K.',
     senderInitials: 'RK',
@@ -365,6 +366,7 @@ export const INITIAL_CHAT_MESSAGES: ChatMessage[] = [
   },
   {
     id: 'msg-2',
+    roomId: 'room-cohort',
     senderId: 'madi',
     senderName: 'Madi B.',
     senderInitials: 'MB',
@@ -375,6 +377,7 @@ export const INITIAL_CHAT_MESSAGES: ChatMessage[] = [
   },
   {
     id: 'msg-3',
+    roomId: 'room-cohort',
     senderId: 'me',
     senderName: 'Birzhan Zhanbolatuly',
     senderInitials: 'BZ',

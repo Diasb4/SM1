@@ -14,11 +14,33 @@ if (!fs.existsSync(dataDir)) {
 const dbPath = path.join(dataDir, 'mentorship.db');
 export const db = new Database(dbPath);
 
-// Enable WAL mode for high performance
+// Enable WAL mode & foreign keys
 db.pragma('journal_mode = WAL');
+db.pragma('synchronous = NORMAL');
+db.pragma('foreign_keys = ON');
 
-// Initialize tables
+// Initialize database schema
 db.exec(`
+  -- Users & Accounts table (SSO & Telegram auth)
+  CREATE TABLE IF NOT EXISTS users (
+    id TEXT PRIMARY KEY,
+    email TEXT UNIQUE NOT NULL,
+    name TEXT NOT NULL,
+    initials TEXT,
+    avatar_color TEXT,
+    role TEXT NOT NULL DEFAULT 'mentee',
+    student_id TEXT,
+    cohort TEXT,
+    major TEXT,
+    year TEXT,
+    gpa TEXT,
+    auth_provider TEXT DEFAULT 'microsoft',
+    telegram_username TEXT,
+    token TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+
+  -- Mentors Catalog table
   CREATE TABLE IF NOT EXISTS mentors (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
@@ -46,6 +68,7 @@ db.exec(`
     quote TEXT
   );
 
+  -- Hard Lectures table (100-seat auditoriums)
   CREATE TABLE IF NOT EXISTS hard_lectures (
     id TEXT PRIMARY KEY,
     title TEXT NOT NULL,
@@ -62,20 +85,42 @@ db.exec(`
     total_seats INTEGER DEFAULT 100,
     booked_seats INTEGER DEFAULT 0,
     attendance_points INTEGER DEFAULT 50,
+    checkin_token TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
 
+  -- Lecture Registrations & Attendance table
   CREATE TABLE IF NOT EXISTS lecture_registrations (
     id TEXT PRIMARY KEY,
     lecture_id TEXT NOT NULL,
     student_id TEXT NOT NULL,
     student_name TEXT NOT NULL,
     student_email TEXT,
+    tier TEXT DEFAULT 'front',
     checked_in_at TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY(lecture_id) REFERENCES hard_lectures(id) ON DELETE CASCADE
   );
 
+  -- 1-on-1 Mentorship Bookings & Meetings table
+  CREATE TABLE IF NOT EXISTS one_on_one_bookings (
+    id TEXT PRIMARY KEY,
+    mentor_id TEXT NOT NULL,
+    mentor_name TEXT NOT NULL,
+    student_id TEXT NOT NULL,
+    student_name TEXT NOT NULL,
+    date_str TEXT NOT NULL,
+    time_slot TEXT NOT NULL,
+    topic TEXT NOT NULL,
+    format TEXT DEFAULT 'offline',
+    location TEXT NOT NULL,
+    teams_link TEXT,
+    notes TEXT,
+    status TEXT DEFAULT 'confirmed',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+
+  -- Stories & Polls table
   CREATE TABLE IF NOT EXISTS stories (
     id TEXT PRIMARY KEY,
     author_id TEXT,
@@ -90,21 +135,49 @@ db.exec(`
     view_count INTEGER DEFAULT 0,
     likes_count INTEGER DEFAULT 0,
     is_official INTEGER DEFAULT 0,
+    poll_data TEXT,
+    reactions_data TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
 
+  -- Story Votes table (prevent double voting)
+  CREATE TABLE IF NOT EXISTS story_poll_votes (
+    story_id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    choice TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (story_id, user_id)
+  );
+
+  -- Chat Rooms table
+  CREATE TABLE IF NOT EXISTS chat_rooms (
+    id TEXT PRIMARY KEY,
+    type TEXT NOT NULL,
+    name TEXT NOT NULL,
+    subtitle TEXT,
+    avatar_bg TEXT,
+    initials TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+
+  -- Chat Messages table
   CREATE TABLE IF NOT EXISTS chat_messages (
     id TEXT PRIMARY KEY,
-    sender_id TEXT,
-    sender_name TEXT,
+    room_id TEXT NOT NULL DEFAULT 'room-cohort',
+    sender_id TEXT NOT NULL,
+    sender_name TEXT NOT NULL,
     sender_initials TEXT,
     sender_avatar_bg TEXT,
     is_me INTEGER DEFAULT 0,
-    text TEXT,
-    time TEXT,
+    text TEXT NOT NULL,
+    time TEXT NOT NULL,
+    reply_to TEXT,
+    reactions_data TEXT,
+    attachment_data TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
 
+  -- DSEW Reports table
   CREATE TABLE IF NOT EXISTS dsew_reports (
     id TEXT PRIMARY KEY,
     period TEXT,
@@ -116,18 +189,168 @@ db.exec(`
     selected_assignments TEXT,
     submitted_at TEXT
   );
-
-  CREATE TABLE IF NOT EXISTS checkins (
-    id TEXT PRIMARY KEY,
-    student_id TEXT,
-    date TEXT,
-    mood TEXT,
-    timestamp TEXT,
-    shared_with_mentor INTEGER DEFAULT 1
-  );
 `);
 
-// Seed initial data if tables are empty
+// Safe migrations for preexisting databases
+try {
+  db.prepare("ALTER TABLE chat_messages ADD COLUMN room_id TEXT DEFAULT 'room-cohort'").run();
+} catch {}
+
+try {
+  db.prepare("ALTER TABLE chat_messages ADD COLUMN attachment_data TEXT").run();
+} catch {}
+
+try {
+  db.prepare("ALTER TABLE one_on_one_bookings ADD COLUMN format TEXT DEFAULT 'offline'").run();
+} catch {}
+
+try {
+  db.prepare("ALTER TABLE one_on_one_bookings ADD COLUMN teams_link TEXT").run();
+} catch {}
+
+try {
+  db.prepare("ALTER TABLE hard_lectures ADD COLUMN checkin_token TEXT").run();
+} catch {}
+
+// Performance Indexes
+db.exec(`
+  CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+  CREATE INDEX IF NOT EXISTS idx_reg_lecture ON lecture_registrations(lecture_id);
+  CREATE INDEX IF NOT EXISTS idx_reg_student ON lecture_registrations(student_id);
+  CREATE INDEX IF NOT EXISTS idx_book_student ON one_on_one_bookings(student_id);
+  CREATE INDEX IF NOT EXISTS idx_book_mentor ON one_on_one_bookings(mentor_id);
+  CREATE INDEX IF NOT EXISTS idx_chat_room ON chat_messages(room_id, created_at);
+  CREATE INDEX IF NOT EXISTS idx_stories_created ON stories(created_at);
+`);
+
+// -------------------------------------------------------------
+// SEED INITIAL USERS (AITU SSO & Telegram)
+// -------------------------------------------------------------
+const userCount = db.prepare('SELECT count(*) as c FROM users').get().c;
+if (userCount === 0) {
+  const insertUser = db.prepare(`
+    INSERT INTO users (
+      id, email, name, initials, avatar_color, role, student_id,
+      cohort, major, year, gpa, auth_provider, telegram_username, token
+    ) VALUES (
+      @id, @email, @name, @initials, @avatar_color, @role, @student_id,
+      @cohort, @major, @year, @gpa, @auth_provider, @telegram_username, @token
+    )
+  `);
+
+  const initialUsers = [
+    {
+      id: 'usr-student',
+      email: '254977@astanait.edu.kz',
+      name: 'Birzhan Zhanbolatuly',
+      initials: 'BZ',
+      avatar_color: 'bg-blue-600 text-white',
+      role: 'mentee',
+      student_id: '254977',
+      cohort: 'SE-2401',
+      major: 'Software Engineering',
+      year: '2nd year',
+      gpa: '3.85',
+      auth_provider: 'microsoft',
+      telegram_username: 'birzhan_aitu',
+      token: 'tok-student-254977'
+    },
+    {
+      id: 'usr-mentor',
+      email: 'aizhan.beibarys@astanait.edu.kz',
+      name: 'Aizhan Beibarys',
+      initials: 'AB',
+      avatar_color: 'bg-purple-600 text-white',
+      role: 'mentor',
+      student_id: '210452',
+      cohort: 'SE-2401 Lead Mentor',
+      major: 'Software Engineering',
+      year: '4th year',
+      gpa: '3.90',
+      auth_provider: 'microsoft',
+      telegram_username: 'aizhan_mentor',
+      token: 'tok-mentor-aizhan'
+    },
+    {
+      id: 'usr-tutor',
+      email: 'ayan.serikbay@astanait.edu.kz',
+      name: 'Ayan Serikbay',
+      initials: 'AS',
+      avatar_color: 'bg-indigo-600 text-white',
+      role: 'hard_mentor',
+      student_id: '200118',
+      cohort: 'Math Dept Peer Tutors',
+      major: 'Computer Science',
+      year: '4th year',
+      gpa: '3.96',
+      auth_provider: 'microsoft',
+      telegram_username: 'ayan_calculus',
+      token: 'tok-tutor-ayan'
+    },
+    {
+      id: 'usr-dsew',
+      email: 'dsew@astanait.edu.kz',
+      name: 'Department of Student Affairs (DSEW)',
+      initials: 'DS',
+      avatar_color: 'bg-emerald-600 text-white',
+      role: 'dsew_admin',
+      student_id: 'STAFF-001',
+      cohort: 'AITU Administration',
+      major: 'Student Support Center',
+      year: 'Staff',
+      gpa: 'N/A',
+      auth_provider: 'microsoft',
+      telegram_username: 'aitu_dsew_bot',
+      token: 'tok-dsew-staff'
+    }
+  ];
+
+  for (const u of initialUsers) {
+    insertUser.run(u);
+  }
+}
+
+// -------------------------------------------------------------
+// SEED CHAT ROOMS
+// -------------------------------------------------------------
+const roomCount = db.prepare('SELECT count(*) as c FROM chat_rooms').get().c;
+if (roomCount === 0) {
+  const insertRoom = db.prepare(`
+    INSERT INTO chat_rooms (id, type, name, subtitle, avatar_bg, initials)
+    VALUES (@id, @type, @name, @subtitle, @avatar_bg, @initials)
+  `);
+
+  insertRoom.run({
+    id: 'room-cohort',
+    type: 'cohort',
+    name: 'SE-2401 Cohort Chat',
+    subtitle: 'Assylkhan Toilybekov & 24 peers',
+    avatar_bg: 'bg-blue-100 text-blue-800',
+    initials: 'SE'
+  });
+
+  insertRoom.run({
+    id: 'room-direct-mentor',
+    type: 'direct',
+    name: 'Aizhan Beibarys (1-on-1)',
+    subtitle: 'Direct Mentorship Channel',
+    avatar_bg: 'bg-purple-100 text-purple-800',
+    initials: 'AB'
+  });
+
+  insertRoom.run({
+    id: 'room-calc-qa',
+    type: 'lecture',
+    name: 'Calculus 1 Q&A (Ayan S.)',
+    subtitle: 'Auditorium C1.3.250 Discussion',
+    avatar_bg: 'bg-indigo-100 text-indigo-800',
+    initials: 'C1'
+  });
+}
+
+// -------------------------------------------------------------
+// SEED MENTORS
+// -------------------------------------------------------------
 const mentorCount = db.prepare('SELECT count(*) as c FROM mentors').get().c;
 if (mentorCount === 0) {
   const insertMentor = db.prepare(`
@@ -254,18 +477,20 @@ if (mentorCount === 0) {
   }
 }
 
-// Seed Hard Lectures
+// -------------------------------------------------------------
+// SEED HARD LECTURES
+// -------------------------------------------------------------
 const lectureCount = db.prepare('SELECT count(*) as c FROM hard_lectures').get().c;
 if (lectureCount === 0) {
   const insertLec = db.prepare(`
     INSERT INTO hard_lectures (
       id, title, subject, lecturer_id, lecturer_name, lecturer_initials,
       lecturer_avatar_bg, lecturer_gpa, lecturer_role, date_text, location,
-      description, total_seats, booked_seats, attendance_points
+      description, total_seats, booked_seats, attendance_points, checkin_token
     ) VALUES (
       @id, @title, @subject, @lecturer_id, @lecturer_name, @lecturer_initials,
       @lecturer_avatar_bg, @lecturer_gpa, @lecturer_role, @date_text, @location,
-      @description, @total_seats, @booked_seats, @attendance_points
+      @description, @total_seats, @booked_seats, @attendance_points, @checkin_token
     )
   `);
 
@@ -284,7 +509,8 @@ if (lectureCount === 0) {
     description: 'Complete breakdown of past midterm exams, limits, derivatives, Taylor series and gotchas. Offline intensive session with live Q&A.',
     total_seats: 100,
     booked_seats: 68,
-    attendance_points: 50
+    attendance_points: 50,
+    checkin_token: 'AITU-CALC-2026-TOKEN'
   });
 
   insertLec.run({
@@ -302,7 +528,8 @@ if (lectureCount === 0) {
     description: 'Polymorphism, SOLID principles, Factory & Observer patterns explained through practical exam examples in Java.',
     total_seats: 80,
     booked_seats: 54,
-    attendance_points: 40
+    attendance_points: 40,
+    checkin_token: 'AITU-OOP-2026-TOKEN'
   });
 
   insertLec.run({
@@ -320,6 +547,96 @@ if (lectureCount === 0) {
     description: 'Master shortest path algorithms, induction proofs, and recurrence relations before the deadline.',
     total_seats: 120,
     booked_seats: 92,
-    attendance_points: 50
+    attendance_points: 50,
+    checkin_token: 'AITU-DISC-2026-TOKEN'
+  });
+}
+
+// -------------------------------------------------------------
+// SEED STORIES & POLLS
+// -------------------------------------------------------------
+const storyCount = db.prepare('SELECT count(*) as c FROM stories').get().c;
+if (storyCount === 0) {
+  const insertStory = db.prepare(`
+    INSERT INTO stories (
+      id, author_id, author_name, author_initials, author_avatar_bg,
+      type, content, background_color, timestamp, hours_left, view_count, likes_count, is_official, poll_data, reactions_data
+    ) VALUES (
+      @id, @author_id, @author_name, @author_initials, @author_avatar_bg,
+      @type, @content, @background_color, @timestamp, @hours_left, @view_count, @likes_count, @is_official, @poll_data, @reactions_data
+    )
+  `);
+
+  insertStory.run({
+    id: 's-dsew',
+    author_id: 'dsew',
+    author_name: 'AITU Student Affairs (DSEW)',
+    author_initials: 'DS',
+    author_avatar_bg: 'bg-blue-600 text-white',
+    type: 'poll',
+    content: 'Нужна ли дополнительная консультация по Calculus 1 в эту субботу в C1.3.250?',
+    background_color: '#1E3A8A',
+    timestamp: '2h ago',
+    hours_left: 22,
+    view_count: 84,
+    likes_count: 29,
+    is_official: 1,
+    poll_data: JSON.stringify({ question: 'Идешь на субботний разбор?', yesCount: 68, noCount: 16 }),
+    reactions_data: JSON.stringify({ '❤️': 32, '🔥': 28, '👏': 14, '💡': 9 })
+  });
+
+  insertStory.run({
+    id: 's-aizhan',
+    author_id: 'aizhan',
+    author_name: 'Aizhan Beibarys',
+    author_initials: 'AB',
+    author_avatar_bg: 'bg-purple-600 text-white',
+    type: 'text',
+    content: 'Команда SE-2401! Напоминаю: запись на 1-на-1 встречи в коворкинге C1 открыта до пятницы 18:00.',
+    background_color: '#7C3AED',
+    timestamp: '4h ago',
+    hours_left: 20,
+    view_count: 52,
+    likes_count: 18,
+    is_official: 0,
+    poll_data: null,
+    reactions_data: JSON.stringify({ '❤️': 18, '🔥': 12, '👏': 8, '💡': 5 })
+  });
+}
+
+// -------------------------------------------------------------
+// SEED INITIAL CHAT MESSAGES
+// -------------------------------------------------------------
+const chatCount = db.prepare('SELECT count(*) as c FROM chat_messages').get().c;
+if (chatCount === 0) {
+  const insertMsg = db.prepare(`
+    INSERT INTO chat_messages (id, room_id, sender_id, sender_name, sender_initials, sender_avatar_bg, is_me, text, time, reactions_data)
+    VALUES (@id, @room_id, @sender_id, @sender_name, @sender_initials, @sender_avatar_bg, @is_me, @text, @time, @reactions_data)
+  `);
+
+  insertMsg.run({
+    id: 'msg-1',
+    room_id: 'room-cohort',
+    sender_id: 'ruslan',
+    sender_name: 'Ruslan K.',
+    sender_initials: 'RK',
+    sender_avatar_bg: 'bg-emerald-100 text-emerald-700',
+    is_me: 0,
+    text: 'Ребята, завтра собираемся в АкиТайм вечером в 18:00. Если кто-то пойдет, напишите сюда!',
+    time: '17:42',
+    reactions_data: JSON.stringify({ '🔥': 5, '👍': 8 })
+  });
+
+  insertMsg.run({
+    id: 'msg-2',
+    room_id: 'room-cohort',
+    sender_id: 'madi',
+    sender_name: 'Madi B.',
+    sender_initials: 'MB',
+    sender_avatar_bg: 'bg-purple-100 text-purple-700',
+    is_me: 0,
+    text: 'Оооо, газ! Кстати у студентов нашего уника скидка по студенческому ID.',
+    time: '17:48',
+    reactions_data: JSON.stringify({ '❤️': 4 })
   });
 }

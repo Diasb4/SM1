@@ -7,19 +7,29 @@ import {
   Star,
   LogOut,
   ChevronRight,
-  Sparkles
+  Sparkles,
+  Globe,
+  Sun,
+  Moon
 } from 'lucide-react';
+import { Language } from '../../i18n/translations';
 
 export const MentorProfileView: React.FC = () => {
-  const { setRole } = useApp();
+  const { setRole, language, setLanguage, themeMode, setThemeMode, t } = useApp();
   const [isEditing, setIsEditing] = useState(false);
   const [tagline, setTagline] = useState('Your campus navigator. Debate nerd, terrible at chess.');
+
+  const langNames: Record<Language, string> = {
+    kz: 'Қазақ тілі (KZ)',
+    ru: 'Русский язык (RU)',
+    en: 'English (EN)'
+  };
 
   return (
     <div className="flex flex-col gap-4 pb-6">
       {/* Title */}
       <div className="pt-2">
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900">My profile</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-slate-900">{t.profile.title}</h1>
         <p className="text-xs text-slate-500 font-medium mt-0.5">How mentees see you</p>
       </div>
 
@@ -36,10 +46,10 @@ export const MentorProfileView: React.FC = () => {
               Software Engineering · 3rd year
             </p>
             <div className="flex items-center gap-1.5 flex-wrap mt-2">
-              <span className="bg-blue-50 text-blue-600 border border-blue-200 text-[10px] font-bold px-2 py-0.5 rounded-full">
+              <span className="bg-purple-50 text-purple-700 border border-purple-200 text-[10px] font-bold px-2.5 py-0.5 rounded-full">
                 Soft Mentor
               </span>
-              <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-semibold px-2 py-0.5 rounded-full">
+              <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-semibold px-2.5 py-0.5 rounded-full">
                 Provisioned by DSEW
               </span>
             </div>
@@ -58,7 +68,7 @@ export const MentorProfileView: React.FC = () => {
 
       {/* Inline Editor */}
       {isEditing && (
-        <div className="bg-white rounded-2xl p-4 border border-blue-200 shadow-soft animate-fade-in flex flex-col gap-2">
+        <div className="bg-white rounded-3xl p-4 border border-blue-200 shadow-soft animate-fade-in flex flex-col gap-2">
           <label className="text-xs font-bold text-slate-800">Your profile tagline</label>
           <input
             type="text"
@@ -76,15 +86,58 @@ export const MentorProfileView: React.FC = () => {
       )}
 
       {/* Navigation Rows */}
-      <div className="bg-white rounded-2xl border border-slate-100 shadow-soft overflow-hidden divide-y divide-slate-100">
+      <div className="bg-white rounded-3xl border border-slate-100 shadow-soft overflow-hidden divide-y divide-slate-100">
+        {/* Language Picker */}
+        <div className="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600">
+              <Globe className="w-4 h-4" />
+            </div>
+            <div>
+              <p className="text-xs font-bold text-slate-900">{t.profile.language}</p>
+              <p className="text-[11px] text-blue-600 font-medium">{langNames[language]}</p>
+            </div>
+          </div>
+
+          <select
+            value={language}
+            onChange={e => setLanguage(e.target.value as Language)}
+            className="bg-slate-100 text-xs font-bold rounded-xl px-2.5 py-1.5 border border-slate-200 focus:outline-none cursor-pointer"
+          >
+            <option value="kz">Қазақша</option>
+            <option value="ru">Русский</option>
+            <option value="en">English</option>
+          </select>
+        </div>
+
+        {/* Theme Picker */}
+        <div className="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-2xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600">
+              {themeMode === 'light' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            </div>
+            <div>
+              <p className="text-xs font-bold text-slate-900">{t.profile.theme}</p>
+              <p className="text-[11px] text-slate-500">{themeMode === 'light' ? t.profile.light : t.profile.dark}</p>
+            </div>
+          </div>
+
+          <button
+            onClick={() => setThemeMode(themeMode === 'light' ? 'dark' : 'light')}
+            className="bg-slate-100 hover:bg-slate-200 text-xs font-bold rounded-xl px-3 py-1.5 border border-slate-200"
+          >
+            Toggle
+          </button>
+        </div>
+
         {/* Microsoft Identity */}
         <div className="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors cursor-pointer">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-600">
+            <div className="w-9 h-9 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-600">
               <ShieldCheck className="w-4 h-4 text-emerald-600" />
             </div>
             <div>
-              <p className="text-xs font-bold text-slate-900">Microsoft identity</p>
+              <p className="text-xs font-bold text-slate-900">{t.profile.verifiedMicrosoft}</p>
               <p className="text-[11px] text-emerald-600 font-mono">a.beibarys@astanaitu.edu.kz</p>
             </div>
           </div>
@@ -94,7 +147,7 @@ export const MentorProfileView: React.FC = () => {
         {/* Well-being pool */}
         <div className="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors cursor-pointer">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-purple-50 border border-purple-100 flex items-center justify-center text-purple-600">
+            <div className="w-9 h-9 rounded-2xl bg-purple-50 border border-purple-100 flex items-center justify-center text-purple-600">
               <Heart className="w-4 h-4" />
             </div>
             <div>
@@ -108,7 +161,7 @@ export const MentorProfileView: React.FC = () => {
         {/* Mentee reviews */}
         <div className="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors cursor-pointer">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600">
+            <div className="w-9 h-9 rounded-2xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600">
               <Star className="w-4 h-4" />
             </div>
             <div>
@@ -130,13 +183,13 @@ export const MentorProfileView: React.FC = () => {
         className="w-full bg-white hover:bg-rose-50 border border-rose-100 text-rose-600 font-bold py-3.5 px-4 rounded-2xl flex items-center justify-center gap-2 text-xs shadow-soft transition-colors mt-1"
       >
         <LogOut className="w-4 h-4" />
-        <span>Sign out</span>
+        <span>{t.profile.signOut}</span>
       </button>
 
       {/* Footer Info */}
       <div className="text-center pt-2">
         <p className="text-[10px] font-mono text-slate-400">
-          AITU Mentorship · v1.0 · dev.aitusa.mentorship
+          AITU Mentorship Platform · v1.0.0 · Astana IT University
         </p>
       </div>
     </div>

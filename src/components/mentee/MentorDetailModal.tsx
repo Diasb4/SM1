@@ -9,7 +9,9 @@ import {
   Award,
   GraduationCap,
   Users,
-  MessageSquare
+  MessageSquare,
+  Calendar,
+  Sparkles
 } from 'lucide-react';
 
 export const MentorDetailModal: React.FC = () => {
@@ -17,7 +19,9 @@ export const MentorDetailModal: React.FC = () => {
     selectedMentorDetail,
     setSelectedMentorDetail,
     selectAsMyMentor,
-    setMenteeView
+    setMenteeView,
+    openOneOnOneModal,
+    t
   } = useApp();
 
   if (!selectedMentorDetail) return null;
@@ -31,6 +35,10 @@ export const MentorDetailModal: React.FC = () => {
   const handleOpenChat = () => {
     setSelectedMentorDetail(null);
     setMenteeView('chat');
+  };
+
+  const handleBookOneOnOne = () => {
+    openOneOnOneModal(mentor);
   };
 
   return (
@@ -68,14 +76,14 @@ export const MentorDetailModal: React.FC = () => {
                 className="bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold px-4 py-2 rounded-xl flex items-center gap-1.5 shadow-sm"
               >
                 <Check className="w-3.5 h-3.5 text-blue-600 stroke-[3]" />
-                <span>Your mentor</span>
+                <span>{t.mentorCatalog.yourMentor}</span>
               </button>
             ) : (
               <button
                 onClick={handleSelectMentor}
                 className="bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-xs font-bold px-4 py-2 rounded-xl flex items-center gap-1.5 shadow-md shadow-blue-600/20 transition-all"
               >
-                <span>Select as mentor</span>
+                <span>{t.mentorCatalog.selectAsMentor}</span>
               </button>
             )}
           </div>
@@ -85,7 +93,13 @@ export const MentorDetailModal: React.FC = () => {
         <div className="pt-10 px-5 pb-6 flex-1 overflow-y-auto flex flex-col gap-5">
           {/* Header Info */}
           <div>
-            <h1 className="text-xl font-bold text-slate-900">{mentor.name}</h1>
+            <div className="flex items-center justify-between">
+              <h1 className="text-xl font-bold text-slate-900">{mentor.name}</h1>
+              <span className="bg-amber-100 text-amber-900 text-xs font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+                <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
+                <span>{mentor.rating || 4.9} ({mentor.reviewCount || 16})</span>
+              </span>
+            </div>
             <p className="text-xs text-slate-600 mt-1 leading-relaxed">{mentor.tagline}</p>
 
             <div className="flex items-center gap-2 flex-wrap mt-3">
@@ -101,9 +115,28 @@ export const MentorDetailModal: React.FC = () => {
             </div>
           </div>
 
+          {/* 1-on-1 Advisory Booking Highlight Card */}
+          <div className="bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-100 rounded-2xl p-3.5 flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-xl bg-purple-600 text-white flex items-center justify-center shadow-xs">
+                <Calendar className="w-4 h-4" />
+              </div>
+              <div>
+                <h4 className="text-xs font-bold text-purple-950">{t.mentorCatalog.oneOnOneAdvisory}</h4>
+                <p className="text-[10px] text-purple-700">20 min private advisory session</p>
+              </div>
+            </div>
+            <button
+              onClick={handleBookOneOnOne}
+              className="bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold px-3 py-2 rounded-xl shadow-xs active:scale-95 transition-all"
+            >
+              Book Slot
+            </button>
+          </div>
+
           {/* About */}
           <div className="bg-slate-50/70 border border-slate-100 rounded-2xl p-3.5">
-            <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-1.5">About</h3>
+            <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-1.5">{t.mentorCatalog.about}</h3>
             <p className="text-xs text-slate-600 leading-relaxed font-normal">{mentor.about}</p>
           </div>
 
@@ -111,7 +144,7 @@ export const MentorDetailModal: React.FC = () => {
           <div>
             <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800 mb-2">
               <Globe className="w-3.5 h-3.5 text-slate-500" />
-              <span>Languages</span>
+              <span>{t.mentorCatalog.languages}</span>
             </div>
             <div className="flex gap-2 flex-wrap">
               {mentor.languages.map(lang => (
@@ -129,7 +162,7 @@ export const MentorDetailModal: React.FC = () => {
           <div>
             <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800 mb-2">
               <Heart className="w-3.5 h-3.5 text-slate-500" />
-              <span>Hobbies & interests</span>
+              <span>{t.mentorCatalog.hobbies}</span>
             </div>
             <div className="flex gap-2 flex-wrap">
               {mentor.hobbies.map(hobby => (
@@ -147,7 +180,7 @@ export const MentorDetailModal: React.FC = () => {
           <div>
             <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800 mb-2">
               <Star className="w-3.5 h-3.5 text-slate-500" />
-              <span>On campus</span>
+              <span>{t.mentorCatalog.onCampus}</span>
             </div>
             <div className="flex gap-2 flex-wrap">
               {mentor.onCampus.map(item => (
@@ -165,7 +198,7 @@ export const MentorDetailModal: React.FC = () => {
           <div>
             <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800 mb-2">
               <Award className="w-3.5 h-3.5 text-slate-500" />
-              <span>Achievements</span>
+              <span>{t.mentorCatalog.achievements}</span>
             </div>
             <div className="flex flex-col gap-1.5">
               {mentor.achievements.map(ach => (
@@ -187,7 +220,7 @@ export const MentorDetailModal: React.FC = () => {
               className="w-full bg-slate-900 hover:bg-slate-800 text-white font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2 text-xs transition-colors"
             >
               <MessageSquare className="w-4 h-4" />
-              <span>Message in cohort chat</span>
+              <span>{t.home.message} in cohort chat</span>
             </button>
           </div>
         </div>

@@ -1,16 +1,26 @@
-export type UserRole = 'mentee' | 'mentor' | 'hard_mentor';
+export type UserRole = 'mentee' | 'mentor' | 'hard_mentor' | 'dsew_admin';
 
-export type MenteeView = 'home' | 'mentors' | 'lectures' | 'events' | 'chat' | 'profile' | 'skeleton' | 'empty_tasks' | 'offline_error';
+export type MenteeView = 'home' | 'mentors' | 'lectures' | 'guide' | 'events' | 'chat' | 'profile' | 'skeleton' | 'empty_tasks' | 'offline_error';
 export type MentorView = 'community' | 'stories' | 'new_story' | 'weekly_report' | 'events' | 'profile';
 export type HardMentorView = 'my_lectures' | 'scanner' | 'create_lecture' | 'analytics';
 
-export type MoodType = 'terrible' | 'bad' | 'neutral' | 'good' | 'amazing';
+export type AuthProviderType = 'microsoft' | 'telegram' | 'demo';
 
-export interface MoodCheckIn {
-  date: string;
-  mood: MoodType | null;
-  timestamp?: string;
-  sharedWithMentor: boolean;
+export interface AuthUser {
+  id: string;
+  email: string;
+  name: string;
+  initials: string;
+  avatarColor: string;
+  role: UserRole;
+  studentId: string;
+  cohort: string;
+  major: string;
+  year: string;
+  gpa: string;
+  authProvider: AuthProviderType;
+  telegramUsername?: string;
+  token: string;
 }
 
 export interface Mentor {
@@ -38,9 +48,12 @@ export interface Mentor {
   quote?: string;
   rating?: number;
   reviewCount?: number;
+  availableSlots?: string[];
 }
 
 export type SubjectCategory = 'Calculus' | 'Linear Algebra' | 'OOP & Java' | 'Algorithms & DSA' | 'Physics' | 'Discrete Math';
+
+export type AuditoriumTier = 'front' | 'middle' | 'back';
 
 export interface HardLecture {
   id: string;
@@ -60,12 +73,24 @@ export interface HardLecture {
   attendancePoints: number; // e.g. 50 pts
   isBookedByMe: boolean;
   isCheckedIn: boolean;
+  selectedTier?: AuditoriumTier;
+  checkinToken?: string;
+  materialsUrl?: string;
+  materialsTitle?: string;
   registeredStudents: {
     studentId: string;
     studentName: string;
     studentEmail: string;
     checkedInAt?: string;
+    tier?: AuditoriumTier;
   }[];
+}
+
+export interface StoryPoll {
+  question: string;
+  yesCount: number;
+  noCount: number;
+  userVoted?: 'yes' | 'no';
 }
 
 export interface Story {
@@ -74,7 +99,7 @@ export interface Story {
   authorName: string;
   authorInitials: string;
   authorAvatarBg: string;
-  type: 'photo' | 'text';
+  type: 'photo' | 'text' | 'poll';
   content: string;
   backgroundColor?: string;
   timestamp: string;
@@ -83,6 +108,8 @@ export interface Story {
   likesCount: number;
   hasUnseen: boolean;
   isOfficial?: boolean;
+  poll?: StoryPoll;
+  reactions?: { [emoji: string]: number };
 }
 
 export interface MenteeSignal {
@@ -110,10 +137,25 @@ export interface EventItem {
   isRegistered: boolean;
   isCompleted: boolean;
   tagColor?: string;
+  format?: 'offline' | 'online_teams';
+  locationOrUrl?: string;
+}
+
+export type ChatRoomType = 'cohort' | 'direct' | 'lecture';
+
+export interface ChatRoom {
+  id: string;
+  type: ChatRoomType;
+  name: string;
+  subtitle: string;
+  avatarBg: string;
+  initials: string;
+  unreadCount?: number;
 }
 
 export interface ChatMessage {
   id: string;
+  roomId: string;
   senderId: string;
   senderName: string;
   senderInitials: string;
@@ -121,6 +163,17 @@ export interface ChatMessage {
   isMe: boolean;
   text: string;
   time: string;
+  replyTo?: {
+    id: string;
+    senderName: string;
+    text: string;
+  };
+  reactions?: { [emoji: string]: number };
+  attachment?: {
+    type: 'link' | 'file';
+    title: string;
+    url: string;
+  };
 }
 
 export interface DSEWReport {
@@ -133,4 +186,33 @@ export interface DSEWReport {
   concerns: string;
   selectedAssignments: string[];
   submittedAt: string;
+}
+
+export type MeetingFormat = 'offline' | 'online_teams';
+
+export interface OneOnOneBooking {
+  id: string;
+  mentorId: string;
+  mentorName: string;
+  studentId: string;
+  studentName: string;
+  dateStr: string;
+  timeSlot: string;
+  topic: string;
+  format: MeetingFormat;
+  location: string;
+  teamsLink?: string;
+  notes?: string;
+  status: 'confirmed' | 'completed' | 'cancelled' | 'rescheduled';
+  createdAt: string;
+}
+
+export interface NotificationItem {
+  id: string;
+  title: string;
+  body: string;
+  time: string;
+  read: boolean;
+  type: 'lecture' | 'mentor' | 'points' | 'event';
+  actionView?: string;
 }

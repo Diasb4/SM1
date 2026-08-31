@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useApp } from '../../context/AppContext';
 import { HardLecture, SubjectCategory } from '../../types';
 import {
@@ -11,24 +11,50 @@ import {
   Check,
   Search,
   Sparkles,
-  BookOpen
+  BookOpen,
+  Download,
+  Layers,
+  FileText
 } from 'lucide-react';
+import { playSound } from '../../utils/audio';
 
 export const LectureCatalogView: React.FC = () => {
-  const { hardLectures, bookLecture, cancelLectureBooking, openTicketModal, attendancePoints, attendanceRate } = useApp();
+  const {
+    hardLectures,
+    bookLecture,
+    cancelLectureBooking,
+    openTicketModal,
+    openAuditoriumModal,
+    attendancePoints,
+    attendanceRate,
+    t
+  } = useApp();
+
   const [selectedSubject, setSelectedSubject] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState<string>('');
 
-  const subjects = ['All', 'Calculus', 'OOP & Java', 'Discrete Math', 'Algorithms & DSA'];
+  const subjects = useMemo(() => ['All', 'Calculus', 'OOP & Java', 'Discrete Math', 'Algorithms & DSA'], []);
 
-  const filteredLectures = hardLectures.filter(lec => {
-    const matchesSubject = selectedSubject === 'All' || lec.subject === selectedSubject;
-    const matchesSearch =
-      lec.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      lec.lecturerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      lec.location.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesSubject && matchesSearch;
-  });
+  const filteredLectures = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    return hardLectures.filter(lec => {
+      const matchesSubject = selectedSubject === 'All' || lec.subject === selectedSubject;
+      if (!matchesSubject) return false;
+
+      if (!q) return true;
+      return (
+        lec.title.toLowerCase().includes(q) ||
+        lec.lecturerName.toLowerCase().includes(q) ||
+        lec.location.toLowerCase().includes(q)
+      );
+    });
+  }, [hardLectures, selectedSubject, searchQuery]);
+
+  const handleDownloadMaterials = (e: React.MouseEvent, title: string) => {
+    e.stopPropagation();
+    playSound('success');
+    alert(`Downloaded PDF study materials for "${title}"!`);
+  };
 
   return (
     <div className="flex flex-col gap-4 pb-6">
@@ -36,9 +62,9 @@ export const LectureCatalogView: React.FC = () => {
       <div className="pt-2">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">Academic Lectures</h1>
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900">{t.lectures.title}</h1>
             <p className="text-xs text-slate-500 font-medium mt-0.5">
-              Hard mentors & Peer Tutors · Offline sessions
+              {t.lectures.subtitle}
             </p>
           </div>
 
@@ -48,22 +74,22 @@ export const LectureCatalogView: React.FC = () => {
               ⚡
             </div>
             <div>
-              <p className="text-[10px] text-amber-800 font-bold uppercase tracking-wider">Attendance</p>
-              <p className="text-xs font-extrabold text-amber-950">{attendancePoints} pts · {attendanceRate}%</p>
+              <p className="text-[10px] text-amber-800 font-bold uppercase tracking-wider">{t.lectures.attendancePill}</p>
+              <p className="text-xs font-extrabold text-amber-950">{attendancePoints} {t.lectures.points} · {attendanceRate}%</p>
             </div>
           </div>
         </div>
       </div>
 
       {/* Info Callout Banner */}
-      <div className="bg-gradient-to-r from-blue-50 to-indigo-50/70 border border-blue-100 rounded-2xl p-3.5 flex items-start gap-3 shadow-xs">
-        <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center flex-shrink-0 shadow-sm">
+      <div className="bg-gradient-to-r from-blue-50 to-indigo-50/70 border border-blue-100 rounded-3xl p-4 flex items-start gap-3 shadow-xs">
+        <div className="w-9 h-9 rounded-2xl bg-blue-600 text-white flex items-center justify-center flex-shrink-0 shadow-sm mt-0.5">
           <BookOpen className="w-4 h-4" />
         </div>
         <div>
-          <h3 className="text-xs font-bold text-blue-950">Earn attendance points offline</h3>
+          <h3 className="text-xs font-bold text-blue-950">{t.lectures.bannerTitle}</h3>
           <p className="text-[11px] text-blue-800/90 leading-relaxed mt-0.5">
-            Reserve your seat, scan your QR ticket at the auditorium entrance with the lecturer, and earn +50 points for university attendance grading.
+            {t.lectures.bannerDesc}
           </p>
         </div>
       </div>
@@ -80,7 +106,7 @@ export const LectureCatalogView: React.FC = () => {
                 : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
             }`}
           >
-            {subj}
+            {subj === 'All' ? t.lectures.allSubjects : subj}
           </button>
         ))}
       </div>
@@ -92,7 +118,7 @@ export const LectureCatalogView: React.FC = () => {
           type="text"
           value={searchQuery}
           onChange={e => setSearchQuery(e.target.value)}
-          placeholder="Search by topic, lecturer (e.g. Ayan) or room..."
+          placeholder={t.lectures.searchPlaceholder}
           className="w-full bg-slate-50 border border-slate-200 text-slate-900 text-xs rounded-xl pl-9 pr-4 py-2.5 focus:outline-none focus:bg-white focus:border-blue-500 transition-colors placeholder:text-slate-400"
         />
       </div>
@@ -117,7 +143,7 @@ export const LectureCatalogView: React.FC = () => {
 
                 <div className="flex items-center gap-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold px-2.5 py-0.5 rounded-full">
                   <Award className="w-3 h-3 text-emerald-600" />
-                  <span>+{lecture.attendancePoints} Attendance pts</span>
+                  <span>+{lecture.attendancePoints} {t.lectures.points}</span>
                 </div>
               </div>
 
@@ -159,19 +185,19 @@ export const LectureCatalogView: React.FC = () => {
                 </div>
               </div>
 
-              {/* Seat Capacity Progress Bar */}
-              <div>
-                <div className="flex items-center justify-between text-[11px] mb-1.5 font-medium">
+              {/* Seat Capacity Progress Bar & Auditorium Visualizer Shortcut */}
+              <div className="flex flex-col gap-1.5 bg-slate-50/50 p-3 rounded-2xl border border-slate-100">
+                <div className="flex items-center justify-between text-[11px] font-medium">
                   <span className="text-slate-500 flex items-center gap-1">
                     <Users className="w-3.5 h-3.5 text-slate-400" />
-                    <span>Capacity</span>
+                    <span>{t.lectures.capacity}</span>
                   </span>
                   <span className="font-bold text-slate-800">
-                    {lecture.bookedSeats} / {lecture.totalSeats} seats booked ({seatsLeft} left)
+                    {lecture.bookedSeats} / {lecture.totalSeats} ({seatsLeft} {t.lectures.seatsLeft})
                   </span>
                 </div>
 
-                <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                <div className="w-full h-2.5 bg-slate-200 rounded-full overflow-hidden">
                   <div
                     className={`h-full rounded-full transition-all duration-500 ${
                       percentFull > 85
@@ -183,6 +209,29 @@ export const LectureCatalogView: React.FC = () => {
                     style={{ width: `${percentFull}%` }}
                   />
                 </div>
+
+                <button
+                  onClick={() => openAuditoriumModal(lecture)}
+                  className="mt-1 text-[10px] text-blue-600 hover:text-blue-800 font-semibold flex items-center gap-1 self-start"
+                >
+                  <Layers className="w-3 h-3" />
+                  <span>{t.lectures.auditoriumPicker}</span>
+                </button>
+              </div>
+
+              {/* Download Materials Shortcut */}
+              <div className="flex items-center justify-between bg-blue-50/40 p-2 rounded-xl border border-blue-100/60 text-xs">
+                <div className="flex items-center gap-1.5 text-blue-950 font-medium">
+                  <FileText className="w-3.5 h-3.5 text-blue-600" />
+                  <span className="text-[11px] truncate">{t.lectures.downloadMaterials}</span>
+                </div>
+                <button
+                  onClick={e => handleDownloadMaterials(e, lecture.title)}
+                  className="bg-white border border-blue-200 text-blue-700 hover:bg-blue-50 text-[10px] font-bold px-2.5 py-1 rounded-lg flex items-center gap-1 shadow-2xs"
+                >
+                  <Download className="w-3 h-3" />
+                  <span>PDF</span>
+                </button>
               </div>
 
               {/* Action Buttons */}
@@ -191,26 +240,26 @@ export const LectureCatalogView: React.FC = () => {
                   <>
                     <button
                       onClick={() => openTicketModal(lecture)}
-                      className="flex-1 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white font-bold py-2.5 px-3 rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-md shadow-emerald-600/20 transition-all"
+                      className="flex-1 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white font-bold py-3 px-3 rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-md shadow-emerald-600/20 transition-all"
                     >
                       <QrCode className="w-4 h-4" />
-                      <span>{lecture.isCheckedIn ? 'Checked In ✓' : 'View QR Ticket'}</span>
+                      <span>{lecture.isCheckedIn ? t.lectures.checkedIn : t.lectures.viewTicket}</span>
                     </button>
 
                     <button
                       onClick={() => cancelLectureBooking(lecture.id)}
-                      className="px-3 py-2.5 text-slate-500 hover:text-rose-600 text-xs font-semibold rounded-xl hover:bg-rose-50 transition-colors"
+                      className="px-3 py-3 text-slate-500 hover:text-rose-600 text-xs font-semibold rounded-xl hover:bg-rose-50 transition-colors"
                     >
-                      Cancel
+                      {t.lectures.cancel}
                     </button>
                   </>
                 ) : (
                   <button
                     disabled={isFull}
-                    onClick={() => bookLecture(lecture.id)}
-                    className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 text-white font-bold py-3 px-4 rounded-xl text-xs flex items-center justify-center gap-2 shadow-md shadow-blue-600/20 active:scale-[0.98] transition-all"
+                    onClick={() => openAuditoriumModal(lecture)}
+                    className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 text-white font-bold py-3.5 px-4 rounded-xl text-xs flex items-center justify-center gap-2 shadow-md shadow-blue-600/20 active:scale-[0.98] transition-all"
                   >
-                    <span>{isFull ? 'Sold Out (100% Full)' : 'Reserve Seat & Get QR Ticket'}</span>
+                    <span>{isFull ? t.lectures.soldOut : t.lectures.reserveSeat}</span>
                   </button>
                 )}
               </div>

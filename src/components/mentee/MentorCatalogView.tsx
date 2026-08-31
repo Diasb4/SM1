@@ -1,40 +1,46 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useApp } from '../../context/AppContext';
 import { Mentor } from '../../types';
-import { Search, Sparkles, UserCheck, Users } from 'lucide-react';
+import { Search, Sparkles, UserCheck, Users, Calendar, Star } from 'lucide-react';
 
 export const MentorCatalogView: React.FC = () => {
-  const { mentors, setSelectedMentorDetail } = useApp();
+  const { mentors, setSelectedMentorDetail, openOneOnOneModal, t } = useApp();
   const [activeCategory, setActiveCategory] = useState<string>('for_you');
   const [searchQuery, setSearchQuery] = useState<string>('');
 
-  const categories = [
-    { id: 'for_you', label: 'For you' },
-    { id: 'my_major', label: 'My major' },
-    { id: 'creative', label: 'Creative' },
-    { id: 'sport', label: 'Sport' },
-    { id: 'star', label: 'Star' }
-  ];
+  const categories = useMemo(() => [
+    { id: 'for_you', label: t.mentorCatalog.forYou },
+    { id: 'my_major', label: t.mentorCatalog.myMajor },
+    { id: 'creative', label: t.mentorCatalog.creative },
+    { id: 'sport', label: t.mentorCatalog.sport },
+    { id: 'star', label: t.mentorCatalog.star }
+  ], [t]);
 
-  const filteredMentors = mentors.filter(mentor => {
-    const matchesCategory =
-      activeCategory === 'for_you' ||
-      mentor.category === activeCategory ||
-      (activeCategory === 'star' && (mentor.rating || 0) >= 4.9);
-    const matchesSearch =
-      mentor.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      mentor.major.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      mentor.tags.some(t => t.toLowerCase().includes(searchQuery.toLowerCase()));
-    return matchesCategory && matchesSearch;
-  });
+  const filteredMentors = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    return mentors.filter(mentor => {
+      const matchesCategory =
+        activeCategory === 'for_you' ||
+        mentor.category === activeCategory ||
+        (activeCategory === 'star' && (mentor.rating || 0) >= 4.9);
+      if (!matchesCategory) return false;
+
+      if (!q) return true;
+      return (
+        mentor.name.toLowerCase().includes(q) ||
+        mentor.major.toLowerCase().includes(q) ||
+        mentor.tags.some(tag => tag.toLowerCase().includes(q))
+      );
+    });
+  }, [mentors, activeCategory, searchQuery]);
 
   return (
     <div className="flex flex-col gap-4 pb-6">
       {/* Title Header */}
       <div className="pt-2">
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900">Choose your mentor</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-slate-900">{t.mentorCatalog.title}</h1>
         <p className="text-xs text-slate-500 font-medium mt-0.5">
-          Soft mentors — pick the human, not the metric
+          {t.mentorCatalog.subtitle}
         </p>
       </div>
 
@@ -62,7 +68,7 @@ export const MentorCatalogView: React.FC = () => {
           type="text"
           value={searchQuery}
           onChange={e => setSearchQuery(e.target.value)}
-          placeholder="Search by name, hobby or tech stack..."
+          placeholder={t.mentorCatalog.searchPlaceholder}
           className="w-full bg-slate-50 border border-slate-200 text-slate-900 text-xs rounded-xl pl-9 pr-4 py-2.5 focus:outline-none focus:bg-white focus:border-blue-500 transition-colors placeholder:text-slate-400"
         />
       </div>
@@ -74,13 +80,17 @@ export const MentorCatalogView: React.FC = () => {
             <div
               key={mentor.id}
               onClick={() => setSelectedMentorDetail(mentor)}
-              className="bg-white rounded-3xl overflow-hidden border border-slate-100 shadow-soft cursor-pointer hover:shadow-card hover:border-slate-200 transition-all duration-200"
+              className="bg-white rounded-3xl overflow-hidden border border-slate-100 shadow-soft cursor-pointer hover:shadow-card hover:border-slate-200 transition-all duration-200 flex flex-col"
             >
               {/* Pastel Cover Area */}
               <div
                 className={`h-24 bg-gradient-to-r ${mentor.coverGradient} p-3 flex flex-col justify-between relative`}
               >
-                <div className="flex justify-end">
+                <div className="flex justify-end items-center gap-1.5">
+                  <span className="bg-white/90 backdrop-blur-sm text-[10px] font-bold text-amber-900 px-2 py-0.5 rounded-full border border-white/60 flex items-center gap-1">
+                    <Star className="w-3 h-3 text-amber-500 fill-amber-500" />
+                    <span>{mentor.rating || 4.9}</span>
+                  </span>
                   <span className="bg-white/80 backdrop-blur-sm text-[10px] font-semibold text-slate-700 px-2.5 py-0.5 rounded-full border border-white/60">
                     {mentor.coverTag}
                   </span>
@@ -103,15 +113,15 @@ export const MentorCatalogView: React.FC = () => {
                   {mentor.isYourMentor ? (
                     <span className="bg-blue-50 text-blue-600 border border-blue-200 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
                       <UserCheck className="w-3 h-3" />
-                      <span>Your mentor</span>
+                      <span>{t.mentorCatalog.yourMentor}</span>
                     </span>
                   ) : mentor.spotsLeft === 0 ? (
                     <span className="bg-amber-100 text-amber-800 text-[10px] font-bold px-2 py-0.5 rounded-full">
-                      Full
+                      {t.mentorCatalog.full}
                     </span>
                   ) : (
                     <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold px-2 py-0.5 rounded-full">
-                      {mentor.spotsLeft} spots
+                      {mentor.spotsLeft} {t.mentorCatalog.spots}
                     </span>
                   )}
                 </div>
@@ -130,6 +140,21 @@ export const MentorCatalogView: React.FC = () => {
                       {tag}
                     </span>
                   ))}
+                </div>
+
+                {/* 1-on-1 Shortcut Button */}
+                <div className="mt-3 pt-2 border-t border-slate-50 flex items-center justify-between">
+                  <span className="text-[10px] text-slate-400 font-medium">{mentor.major} · {mentor.year}</span>
+                  <button
+                    onClick={e => {
+                      e.stopPropagation();
+                      openOneOnOneModal(mentor);
+                    }}
+                    className="text-[11px] font-bold text-purple-700 hover:text-purple-900 bg-purple-50 hover:bg-purple-100 px-3 py-1 rounded-xl flex items-center gap-1 transition-colors"
+                  >
+                    <Calendar className="w-3 h-3 text-purple-600" />
+                    <span>{t.mentorCatalog.oneOnOneAdvisory}</span>
+                  </button>
                 </div>
               </div>
             </div>

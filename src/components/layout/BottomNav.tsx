@@ -10,7 +10,7 @@ import {
   FileText,
   BookOpen,
   QrCode,
-  Layers
+  Compass
 } from 'lucide-react';
 import { MenteeView, MentorView, HardMentorView } from '../../types';
 
@@ -22,21 +22,25 @@ export const BottomNav: React.FC = () => {
     mentorView,
     setMentorView,
     hardMentorView,
-    setHardMentorView
+    setHardMentorView,
+    t,
+    themeMode
   } = useApp();
+
+  const isDark = themeMode === 'dark';
 
   if (role === 'mentee') {
     const menteeTabs: { id: MenteeView; label: string; icon: React.FC<{ className?: string }> }[] = [
-      { id: 'home', label: 'Home', icon: Home },
-      { id: 'mentors', label: 'Soft Mentors', icon: Users },
-      { id: 'lectures', label: 'Hard Lectures', icon: BookOpen },
-      { id: 'events', label: 'Events', icon: Calendar },
-      { id: 'chat', label: 'Chat', icon: MessageSquare },
-      { id: 'profile', label: 'Profile', icon: User }
+      { id: 'home', label: t.nav.home, icon: Home },
+      { id: 'lectures', label: t.nav.lectures, icon: BookOpen },
+      { id: 'guide', label: 'Guide 2.0', icon: Compass },
+      { id: 'mentors', label: t.nav.mentors, icon: Users },
+      { id: 'chat', label: t.nav.chat, icon: MessageSquare },
+      { id: 'profile', label: t.nav.profile, icon: User }
     ];
 
     return (
-      <div className="sticky bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-slate-100 px-2 py-2 flex items-center justify-around z-30">
+      <div className={`sticky bottom-0 left-0 right-0 ${isDark ? 'bg-slate-900/95 border-slate-800' : 'bg-white/95 border-slate-100'} backdrop-blur-md border-t px-2 py-2 flex items-center justify-around z-30 transition-colors`}>
         {menteeTabs.map(tab => {
           const Icon = tab.icon;
           const isActive = menteeView === tab.id;
@@ -44,12 +48,16 @@ export const BottomNav: React.FC = () => {
             <button
               key={tab.id}
               onClick={() => setMenteeView(tab.id)}
-              className={`flex flex-col items-center gap-1 py-1 px-2 rounded-xl transition-all ${
-                isActive ? 'text-blue-600 font-bold scale-105' : 'text-slate-400 hover:text-slate-600 font-medium'
+              className={`flex flex-col items-center gap-1 py-1 px-1.5 rounded-xl transition-all ${
+                isActive
+                  ? 'text-blue-600 font-bold scale-105'
+                  : isDark
+                  ? 'text-slate-400 hover:text-slate-200 font-medium'
+                  : 'text-slate-400 hover:text-slate-600 font-medium'
               }`}
             >
               <Icon className={`w-5 h-5 ${isActive ? 'stroke-[2.5]' : 'stroke-[1.8]'}`} />
-              <span className="text-[9px] leading-tight text-center">{tab.label}</span>
+              <span className="text-[9px] leading-tight text-center whitespace-nowrap">{tab.label}</span>
             </button>
           );
         })}
@@ -59,7 +67,7 @@ export const BottomNav: React.FC = () => {
 
   if (role === 'hard_mentor') {
     return (
-      <div className="sticky bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-slate-100 px-3 py-2 flex items-center justify-around z-30">
+      <div className={`sticky bottom-0 left-0 right-0 ${isDark ? 'bg-slate-900/95 border-slate-800' : 'bg-white/95 border-slate-100'} backdrop-blur-md border-t px-3 py-2 flex items-center justify-around z-30 transition-colors`}>
         <button
           onClick={() => setHardMentorView('my_lectures')}
           className={`flex flex-col items-center gap-1 py-1 px-3 rounded-xl transition-all ${
@@ -67,7 +75,7 @@ export const BottomNav: React.FC = () => {
           }`}
         >
           <BookOpen className="w-5 h-5 stroke-[2]" />
-          <span className="text-[10px]">Lectures</span>
+          <span className="text-[10px] font-semibold">{t.lecturerDesk.title}</span>
         </button>
 
         <button
@@ -77,7 +85,7 @@ export const BottomNav: React.FC = () => {
           }`}
         >
           <QrCode className="w-5 h-5 stroke-[2]" />
-          <span className="text-[10px]">QR Check-in</span>
+          <span className="text-[10px] font-semibold">{t.nav.scanner}</span>
         </button>
       </div>
     );
@@ -85,15 +93,15 @@ export const BottomNav: React.FC = () => {
 
   // Soft Mentor role tabs
   const mentorTabs: { id: MentorView; label: string; icon: React.FC<{ className?: string }> }[] = [
-    { id: 'community', label: 'Cohort', icon: Users },
-    { id: 'stories', label: 'Stories', icon: Sparkles },
-    { id: 'weekly_report', label: 'Reports', icon: FileText },
-    { id: 'events', label: 'Events', icon: Calendar },
-    { id: 'profile', label: 'Profile', icon: User }
+    { id: 'community', label: t.nav.community, icon: Users },
+    { id: 'stories', label: t.nav.stories, icon: Sparkles },
+    { id: 'weekly_report', label: t.nav.reports, icon: FileText },
+    { id: 'events', label: t.nav.events, icon: Calendar },
+    { id: 'profile', label: t.nav.profile, icon: User }
   ];
 
   return (
-    <div className="sticky bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-slate-100 px-3 py-2 flex items-center justify-around z-30">
+    <div className={`sticky bottom-0 left-0 right-0 ${isDark ? 'bg-slate-900/95 border-slate-800' : 'bg-white/95 border-slate-100'} backdrop-blur-md border-t px-3 py-2 flex items-center justify-around z-30 transition-colors`}>
       {mentorTabs.map(tab => {
         const Icon = tab.icon;
         const isActive = mentorView === tab.id;
@@ -102,7 +110,11 @@ export const BottomNav: React.FC = () => {
             key={tab.id}
             onClick={() => setMentorView(tab.id)}
             className={`flex flex-col items-center gap-1 py-1 px-3 rounded-xl transition-all ${
-              isActive ? 'text-purple-600 font-bold scale-105' : 'text-slate-400 hover:text-slate-600 font-medium'
+              isActive
+                ? 'text-purple-600 font-bold scale-105'
+                : isDark
+                ? 'text-slate-400 hover:text-slate-200 font-medium'
+                : 'text-slate-400 hover:text-slate-600 font-medium'
             }`}
           >
             <Icon className={`w-5 h-5 ${isActive ? 'stroke-[2.5]' : 'stroke-[1.8]'}`} />

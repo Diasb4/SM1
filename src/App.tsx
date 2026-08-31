@@ -7,13 +7,16 @@ import { BottomNav } from './components/layout/BottomNav';
 import { HomeView } from './components/mentee/HomeView';
 import { MentorCatalogView } from './components/mentee/MentorCatalogView';
 import { MentorDetailModal } from './components/mentee/MentorDetailModal';
+import { OneOnOneBookingModal } from './components/mentee/OneOnOneBookingModal';
 import { ChatView } from './components/mentee/ChatView';
 import { EventsView } from './components/mentee/EventsView';
 import { MenteeProfileView } from './components/mentee/MenteeProfileView';
+import { AituGuideView } from './components/guide/AituGuideView';
 
 // Hard Mentorship & Lectures Views
 import { LectureCatalogView } from './components/lectures/LectureCatalogView';
 import { AttendanceTicketModal } from './components/lectures/AttendanceTicketModal';
+import { AuditoriumSeatPickerModal } from './components/lectures/AuditoriumSeatPickerModal';
 import { HardMentorLecturesView } from './components/lectures/HardMentorLecturesView';
 
 // Mentor Views (Soft Mentorship)
@@ -23,16 +26,30 @@ import { WeeklyReportView } from './components/mentor/WeeklyReportView';
 import { MentorEventsView } from './components/mentor/MentorEventsView';
 import { MentorProfileView } from './components/mentor/MentorProfileView';
 
-// System States
+// System States & Notifications
 import { SkeletonView } from './components/system/SkeletonView';
 import { TasksEmptyView } from './components/system/TasksEmptyView';
 import { OfflineErrorView } from './components/system/OfflineErrorView';
+import { NotificationDrawer } from './components/common/NotificationDrawer';
 
 // Modals
 import { StoryViewerModal } from './components/stories/StoryViewerModal';
 
 const AppContent: React.FC = () => {
-  const { role, menteeView, mentorView, hardMentorView, isSimulatingOffline } = useApp();
+  const {
+    role,
+    menteeView,
+    mentorView,
+    hardMentorView,
+    isSimulatingOffline,
+    selectedMentorForBooking,
+    closeOneOnOneModal,
+    auditoriumLectureModal,
+    closeAuditoriumModal,
+    bookLecture,
+    isNotificationOpen,
+    closeNotifications
+  } = useApp();
 
   const renderContent = () => {
     if (isSimulatingOffline) {
@@ -45,6 +62,8 @@ const AppContent: React.FC = () => {
           return <HomeView />;
         case 'lectures':
           return <LectureCatalogView />;
+        case 'guide':
+          return <AituGuideView />;
         case 'mentors':
           return <MentorCatalogView />;
         case 'chat':
@@ -101,6 +120,32 @@ const AppContent: React.FC = () => {
       <StoryViewerModal />
       <MentorDetailModal />
       <AttendanceTicketModal />
+
+      {/* 1-on-1 Mentorship Booking Modal */}
+      {selectedMentorForBooking && (
+        <OneOnOneBookingModal
+          mentor={selectedMentorForBooking}
+          onClose={closeOneOnOneModal}
+        />
+      )}
+
+      {/* Auditorium Seat Visualizer Modal */}
+      {auditoriumLectureModal && (
+        <AuditoriumSeatPickerModal
+          lecture={auditoriumLectureModal}
+          onClose={closeAuditoriumModal}
+          onConfirmTier={tier => {
+            bookLecture(auditoriumLectureModal.id, tier);
+            closeAuditoriumModal();
+          }}
+        />
+      )}
+
+      {/* Notification Drawer */}
+      <NotificationDrawer
+        isOpen={isNotificationOpen}
+        onClose={closeNotifications}
+      />
     </DeviceFrame>
   );
 };
