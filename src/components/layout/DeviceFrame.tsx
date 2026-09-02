@@ -57,9 +57,9 @@ export const DeviceFrame: React.FC<DeviceFrameProps> = ({ children }) => {
   ];
 
   return (
-    <div className={`min-h-screen ${themeMode === 'dark' ? 'dark bg-slate-950 text-slate-100' : 'bg-slate-900 text-slate-100'} flex flex-col items-center justify-start p-2 sm:p-6 font-sans transition-colors duration-200`}>
+    <div className={`min-h-screen ${themeMode === 'dark' ? 'dark bg-slate-950 text-slate-100' : 'bg-slate-100 text-slate-900'} flex flex-col items-center justify-start p-2 sm:p-6 font-sans transition-colors duration-200`}>
       {/* Top Demo Control Toolbar */}
-      <header className="w-full max-w-4xl mb-4 bg-slate-900/90 border border-slate-800 backdrop-blur-md rounded-2xl p-3 px-4 flex flex-wrap items-center justify-between gap-3 shadow-xl z-40">
+      <header className={`w-full max-w-4xl mb-4 ${themeMode === 'dark' ? 'bg-slate-900/90 border-slate-800 text-white' : 'bg-white/95 border-slate-200 text-slate-900 shadow-sm'} border backdrop-blur-md rounded-2xl p-3 px-4 flex flex-wrap items-center justify-between gap-3 z-40 transition-colors`}>
         {/* Brand & Telegram Badge */}
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-bold text-xs shadow-md">
@@ -67,24 +67,24 @@ export const DeviceFrame: React.FC<DeviceFrameProps> = ({ children }) => {
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="font-bold text-sm text-white tracking-tight">{t.appName}</span>
-              <span className="text-[10px] bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded-full border border-blue-500/30 font-mono flex items-center gap-1">
-                <Bot className="w-3 h-3 text-sky-400" />
+              <span className={`font-bold text-sm tracking-tight ${themeMode === 'dark' ? 'text-white' : 'text-slate-900'}`}>{t.appName}</span>
+              <span className="text-[10px] bg-blue-500/20 text-blue-600 dark:text-blue-300 px-2 py-0.5 rounded-full border border-blue-500/30 font-mono flex items-center gap-1">
+                <Bot className="w-3 h-3 text-sky-500 dark:text-sky-400" />
                 <span>TMA Ready</span>
               </span>
             </div>
-            <p className="text-[11px] text-slate-400">{t.tagline}</p>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400">{t.tagline}</p>
           </div>
         </div>
 
         {/* Center: 3-Role Switcher */}
-        <div className="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800 flex-wrap gap-1">
+        <div className={`flex items-center ${themeMode === 'dark' ? 'bg-slate-950 border-slate-800' : 'bg-slate-100 border-slate-200'} p-1 rounded-xl border flex-wrap gap-1`}>
           <button
             onClick={() => setRole('mentee')}
             className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${
               role === 'mentee'
                 ? 'bg-blue-600 text-white shadow-md'
-                : 'text-slate-400 hover:text-white'
+                : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             <span>{t.roles.mentee}</span>
@@ -94,7 +94,7 @@ export const DeviceFrame: React.FC<DeviceFrameProps> = ({ children }) => {
             className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${
               role === 'mentor'
                 ? 'bg-purple-600 text-white shadow-md'
-                : 'text-slate-400 hover:text-white'
+                : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             <span>{t.roles.mentor}</span>
@@ -104,7 +104,7 @@ export const DeviceFrame: React.FC<DeviceFrameProps> = ({ children }) => {
             className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${
               role === 'hard_mentor'
                 ? 'bg-indigo-600 text-white shadow-md'
-                : 'text-slate-400 hover:text-white'
+                : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             <span>{t.roles.hardMentor}</span>
@@ -114,7 +114,7 @@ export const DeviceFrame: React.FC<DeviceFrameProps> = ({ children }) => {
         {/* Right Tools: Language, Notification, Theme & View Jumper */}
         <div className="flex items-center gap-2 flex-wrap">
           {/* Language Switcher Pills */}
-          <div className="flex items-center bg-slate-950 p-0.5 rounded-xl border border-slate-800">
+          <div className={`flex items-center ${themeMode === 'dark' ? 'bg-slate-950 border-slate-800' : 'bg-slate-100 border-slate-200'} p-0.5 rounded-xl border`}>
             {langList.map(item => (
               <button
                 key={item.code}
@@ -122,7 +122,7 @@ export const DeviceFrame: React.FC<DeviceFrameProps> = ({ children }) => {
                 className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all ${
                   language === item.code
                     ? 'bg-blue-600 text-white'
-                    : 'text-slate-400 hover:text-slate-200'
+                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                 }`}
               >
                 {item.label}
@@ -133,10 +133,10 @@ export const DeviceFrame: React.FC<DeviceFrameProps> = ({ children }) => {
           {/* User Account & Role Badge Button */}
           <button
             onClick={openAuthModal}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-bold transition-all shadow-xs cursor-pointer"
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl ${themeMode === 'dark' ? 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700' : 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-200'} border text-xs font-bold transition-all shadow-xs cursor-pointer`}
             title="AITU SSO & Profile Settings"
           >
-            <div className={`w-5 h-5 rounded-md ${currentUser.avatarColor} flex items-center justify-center text-[9px] font-bold`}>
+            <div className={`w-5 h-5 rounded-md ${currentUser.avatarColor} flex items-center justify-center text-[9px] font-bold text-white`}>
               {currentUser.initials}
             </div>
             <span className="max-w-[80px] sm:max-w-[120px] truncate">{currentUser.name.split(' ')[0]}</span>
@@ -148,21 +148,21 @@ export const DeviceFrame: React.FC<DeviceFrameProps> = ({ children }) => {
           {/* Theme Mode Toggle */}
           <button
             onClick={() => setThemeMode(themeMode === 'light' ? 'dark' : 'light')}
-            className="p-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors border border-slate-700"
+            className={`p-1.5 rounded-xl ${themeMode === 'dark' ? 'bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border-slate-700' : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200'} transition-colors border`}
             title={`Switch to ${themeMode === 'light' ? 'Dark' : 'Light'} Mode`}
           >
-            {themeMode === 'light' ? <Moon className="w-4 h-4 text-amber-300" /> : <Sun className="w-4 h-4 text-amber-400" />}
+            {themeMode === 'light' ? <Moon className="w-4 h-4 text-purple-600" /> : <Sun className="w-4 h-4 text-amber-400" />}
           </button>
 
           {/* Notification Button */}
           <button
             onClick={openNotifications}
-            className="relative p-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors border border-slate-700"
+            className={`relative p-1.5 rounded-xl ${themeMode === 'dark' ? 'bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border-slate-700' : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200'} transition-colors border`}
             title="Notifications"
           >
             <Bell className="w-4 h-4" />
             {notificationCount > 0 && (
-              <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-rose-500 text-white text-[9px] font-bold flex items-center justify-center ring-2 ring-slate-900 animate-pulse">
+              <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-rose-500 text-white text-[9px] font-bold flex items-center justify-center ring-2 ring-white dark:ring-slate-900 animate-pulse">
                 {notificationCount}
               </span>
             )}
@@ -184,7 +184,7 @@ export const DeviceFrame: React.FC<DeviceFrameProps> = ({ children }) => {
               }
             }}
             aria-label="Jump directly to screen"
-            className="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl px-2.5 py-1.5 border border-slate-700 focus:outline-none cursor-pointer"
+            className={`${themeMode === 'dark' ? 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700' : 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-200'} text-xs font-semibold rounded-xl px-2.5 py-1.5 border focus:outline-none cursor-pointer`}
           >
             {role === 'mentee' ? (
               <>
@@ -206,7 +206,7 @@ export const DeviceFrame: React.FC<DeviceFrameProps> = ({ children }) => {
               <>
                 <option value="community">👥 1. {t.nav.community}</option>
                 <option value="stories">✨ 2. {t.nav.stories}</option>
-                <option value="weekly_report">📝 3. {t.nav.reports}</option>
+                <option value="analytics">📊 3. Кабинет ментора</option>
                 <option value="events">📅 4. {t.nav.events}</option>
                 <option value="profile">👤 5. {t.nav.profile}</option>
               </>
@@ -218,8 +218,8 @@ export const DeviceFrame: React.FC<DeviceFrameProps> = ({ children }) => {
             onClick={() => setIsTelegramMode(!isTelegramMode)}
             className={`px-2.5 py-1.5 rounded-xl text-xs font-semibold border transition-all flex items-center gap-1.5 ${
               isTelegramMode
-                ? 'bg-sky-500/20 text-sky-300 border-sky-500/40'
-                : 'bg-slate-800 text-slate-400 border-slate-700'
+                ? 'bg-sky-500/20 text-sky-600 dark:text-sky-300 border-sky-500/40'
+                : themeMode === 'dark' ? 'bg-slate-800 text-slate-400 border-slate-700' : 'bg-slate-100 text-slate-600 border-slate-200'
             }`}
             title="Toggle Telegram Mini App Container"
           >
@@ -230,7 +230,7 @@ export const DeviceFrame: React.FC<DeviceFrameProps> = ({ children }) => {
           {/* Phone Frame Toggle */}
           <button
             onClick={() => setIsPhoneFrame(!isPhoneFrame)}
-            className="p-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors border border-slate-700"
+            className={`p-1.5 rounded-xl ${themeMode === 'dark' ? 'bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border-slate-700' : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200'} transition-colors border`}
             title={isPhoneFrame ? 'Switch to Expanded View' : 'Switch to Phone Frame'}
           >
             {isPhoneFrame ? <Monitor className="w-4 h-4" /> : <Smartphone className="w-4 h-4" />}
@@ -246,11 +246,11 @@ export const DeviceFrame: React.FC<DeviceFrameProps> = ({ children }) => {
       >
         <div
           className={`w-full ${
-            themeMode === 'dark' ? 'dark bg-[#0E1621] text-slate-100 border-slate-800' : 'bg-slate-50 text-slate-900 border-slate-800'
+            themeMode === 'dark' ? 'dark bg-[#0E1621] text-slate-100 border-slate-800 shadow-[0_25px_70px_rgba(0,0,0,0.6)]' : 'bg-slate-50 text-slate-900 border-slate-300 shadow-xl'
           } flex flex-col relative overflow-hidden transition-all duration-300 ${
             isPhoneFrame
-              ? 'rounded-[44px] shadow-[0_25px_70px_rgba(0,0,0,0.6)] border-[8px] min-h-[780px]'
-              : 'rounded-3xl shadow-2xl border min-h-[85vh]'
+              ? 'rounded-[44px] border-[8px] min-h-[780px]'
+              : 'rounded-3xl border min-h-[85vh]'
           }`}
         >
           {/* Telegram WebApp Header Bar (when in TMA mode) */}

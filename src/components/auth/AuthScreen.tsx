@@ -68,7 +68,7 @@ export const AuthScreen: React.FC = () => {
   const [studentName, setStudentName] = useState('');
   const [studentId, setStudentId] = useState('');
   const [major, setMajor] = useState('Software Engineering');
-  const [cohort, setCohort] = useState('SE-2501');
+  const [cohort, setCohort] = useState('SE-2601');
   const [selectedNeeds, setSelectedNeeds] = useState<string[]>([
     'Высшая математика (Calculus)',
     'Адаптация в общежитии',
@@ -102,7 +102,7 @@ export const AuthScreen: React.FC = () => {
     { code: 'ITM', name: 'IT Management' }
   ];
 
-  const popularCohorts = ['SE-2501', 'SE-2502', 'CS-2501', 'CY-2501', 'ITM-2501', 'BDA-2501'];
+  const popularCohorts = ['SE-2601', 'SE-2602', 'CS-2601', 'CY-2601', 'ITM-2601', 'BDA-2601'];
 
   const needsList = [
     'Высшая математика (Calculus)',
@@ -149,7 +149,7 @@ export const AuthScreen: React.FC = () => {
 
     let targetEmail = email.trim().toLowerCase();
 
-    // FOOLPROOF: If student typed just their 6-digit ID like 254977, auto-complete
+    // FOOLPROOF: If student typed just their 6-digit ID like 264977, auto-complete
     if (/^\d{6}$/.test(targetEmail)) {
       targetEmail = `${targetEmail}@astanait.edu.kz`;
       setEmail(targetEmail);
@@ -165,13 +165,30 @@ export const AuthScreen: React.FC = () => {
       return;
     }
 
-    // FOOLPROOF PROTECTION: First-years cannot be mentors!
-    const idMatch = targetEmail.match(/^(\d+)/);
+    // FOOLPROOF BILATERAL COHORT VALIDATION:
+    const idMatch = targetEmail.match(/^(\d{2})\d{4}@/);
     if (idMatch) {
-      const startDigits = idMatch[1].substring(0, 2);
-      if (selectedRole === 'mentor' && startDigits === '25') {
+      const yearPrefix = idMatch[1]; // '26' = 1st, '25' = 2nd, '24' = 3rd, '23' = 4th
+
+      // 1. First-years (26xxxx) CANNOT be mentors
+      if (yearPrefix === '26' && selectedRole === 'mentor') {
         playSound('beep');
-        setErrorMessage('🛑 Студенты 1-го курса (набор 2025/2026) не могут быть менторами! Менторами могут быть только студенты 2-го и 3-го курсов. Пожалуйста, выберите роль «Студент».');
+        setErrorMessage('🛑 Студенты 1-го курса (набор 2026 года, 26xxxx) не могут быть менторами! Менторами могут быть только студенты 2-го (25xxxx) и 3-го (24xxxx) курсов. Выберите «Я студент 1-го курса».');
+        return;
+      }
+
+      // 2. 2nd-years (25xxxx) and 3rd-years (24xxxx) CANNOT be mentees
+      if ((yearPrefix === '25' || yearPrefix === '24') && selectedRole === 'mentee') {
+        playSound('beep');
+        setErrorMessage(`🛑 Студенты ${yearPrefix === '25' ? '2-го' : '3-го'} курса (${yearPrefix}xxxx) уже не являются первокурсниками! Программа подопечных рассчитана на набор 2026 года (26xxxx). Выберите «Я ментор (2–3 курс)»!`);
+        return;
+      }
+
+      // 3. In AITU bachelor's is 3 years: 23xxxx and older are graduates/alumni
+      const yearNum = parseInt(yearPrefix, 10);
+      if (yearNum <= 23) {
+        playSound('beep');
+        setErrorMessage('🛑 В AITU трехгодичный бакалавриат (4-го курса нет). Выпускники набора 23xxxx и старше уже окончили университет.');
         return;
       }
     }
@@ -258,7 +275,7 @@ export const AuthScreen: React.FC = () => {
 
       // Next: Onboarding Profile Wizard
       if (selectedRole === 'mentee') {
-        setStudentId(email.match(/^(\d+)/)?.[1] || '254977');
+        setStudentId(email.match(/^(\d+)/)?.[1] || '264977');
         setStep('onboarding_mentee');
       } else {
         setStep('onboarding_mentor');
@@ -485,7 +502,7 @@ export const AuthScreen: React.FC = () => {
                     type="email"
                     value={email}
                     onChange={e => setEmail(e.target.value)}
-                    placeholder="254977@astanait.edu.kz"
+                    placeholder="264977@astanait.edu.kz"
                     required
                     className="w-full bg-slate-900/90 border border-slate-700 text-white text-xs rounded-xl px-3.5 py-3 focus:outline-none focus:border-blue-500 font-mono transition-colors placeholder:text-slate-500 shadow-inner"
                   />
@@ -529,7 +546,7 @@ export const AuthScreen: React.FC = () => {
 
             <div className="grid grid-cols-2 gap-2">
               <button
-                onClick={() => loginWithSSO(email || '254977@astanait.edu.kz')}
+                onClick={() => loginWithSSO(email || '264977@astanait.edu.kz')}
                 className="p-3 bg-slate-900 hover:bg-slate-800 active:scale-[0.98] text-slate-200 border border-slate-700 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm"
               >
                 <ShieldCheck className="w-4 h-4 text-blue-400" />
@@ -700,7 +717,7 @@ export const AuthScreen: React.FC = () => {
                     type="text"
                     value={cohort}
                     onChange={e => setCohort(e.target.value.toUpperCase())}
-                    placeholder="SE-2501"
+                    placeholder="SE-2601"
                     className="w-full mt-1 bg-slate-900 border border-slate-700 text-white text-xs rounded-xl px-3 py-2.5 focus:outline-none focus:border-blue-500 font-mono uppercase font-bold"
                   />
                 </div>

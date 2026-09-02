@@ -195,6 +195,34 @@ fastify.post('/api/auth/send-otp', async (request, reply) => {
     });
   }
 
+  // FOOLPROOF BILATERAL COHORT VALIDATION:
+  const idMatch = normalizedEmail.match(/^(\d{2})\d{4}@/);
+  if (idMatch) {
+    const yearPrefix = idMatch[1]; // '26' = 1 курс, '25' = 2 курс, '24' = 3 курс (выпускной бакалавриат AITU)
+
+    // 1. First-years (26xxxx) can ONLY be mentees
+    if (yearPrefix === '26' && (role === 'mentor' || role === 'hard_mentor')) {
+      return reply.status(400).send({
+        error: 'Студенты 1-го курса (набор 2026 года, 26xxxx) не могут быть менторами. Менторами могут быть только студенты 2-го (25xxxx) и 3-го (24xxxx) курсов. Выберите роль «Студент».'
+      });
+    }
+
+    // 2. 2nd-years (25xxxx) and 3rd-years (24xxxx) can ONLY be mentors, NOT freshers!
+    if ((yearPrefix === '25' || yearPrefix === '24') && role === 'mentee') {
+      return reply.status(400).send({
+        error: `Студенты ${yearPrefix === '25' ? '2-го' : '3-го'} курса (${yearPrefix}xxxx) уже не являются первокурсниками и не могут регистрироваться как подопечные. Первокурсники — это набор 2026 года (26xxxx). Выберите роль «Ментор»!`
+      });
+    }
+
+    // 3. In AITU bachelor's is 3 years: 23xxxx and older are graduates/alumni
+    const yearNum = parseInt(yearPrefix, 10);
+    if (yearNum <= 23) {
+      return reply.status(400).send({
+        error: 'В AITU трехгодичный бакалавриат (4-го курса нет). Студенты набора 23xxxx и старше уже окончили университет.'
+      });
+    }
+  }
+
   // Generate 6-digit random code
   const code = Math.floor(100000 + Math.random() * 900000).toString();
   const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes

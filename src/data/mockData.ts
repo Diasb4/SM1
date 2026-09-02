@@ -20,10 +20,10 @@ export const INITIAL_HARD_LECTURES: HardLecture[] = [
     isBookedByMe: false,
     isCheckedIn: false,
     registeredStudents: [
-      { studentId: '254977', studentName: 'Birzhan Zhanbolatuly', studentEmail: '254977@astanait.edu.kz' },
-      { studentId: '254101', studentName: 'Aru Zhumabek', studentEmail: '254101@astanait.edu.kz', checkedInAt: '17:02' },
-      { studentId: '254202', studentName: 'Nuray Toleu', studentEmail: '254202@astanait.edu.kz' },
-      { studentId: '254303', studentName: 'Dias Kanat', studentEmail: '254303@astanait.edu.kz' }
+      { studentId: '264977', studentName: 'Birzhan Zhanbolatuly', studentEmail: '264977@astanait.edu.kz' },
+      { studentId: '264101', studentName: 'Aru Zhumabek', studentEmail: '264101@astanait.edu.kz', checkedInAt: '17:02' },
+      { studentId: '264202', studentName: 'Nuray Toleu', studentEmail: '264202@astanait.edu.kz' },
+      { studentId: '264303', studentName: 'Dias Kanat', studentEmail: '264303@astanait.edu.kz' }
     ]
   },
   {
@@ -45,7 +45,7 @@ export const INITIAL_HARD_LECTURES: HardLecture[] = [
     isBookedByMe: true,
     isCheckedIn: false,
     registeredStudents: [
-      { studentId: '254977', studentName: 'Birzhan Zhanbolatuly', studentEmail: '254977@astanait.edu.kz' }
+      { studentId: '264977', studentName: 'Birzhan Zhanbolatuly', studentEmail: '264977@astanait.edu.kz' }
     ]
   },
   {
@@ -325,7 +325,7 @@ export const INITIAL_EVENTS: EventItem[] = [
   {
     id: 'ev-1',
     title: 'Teambuilding in AkiTime',
-    description: 'Casual board games, pizza and Q&A with 4th year seniors about surviving exams.',
+    description: 'Casual board games, pizza and Q&A with 3rd year seniors about surviving exams.',
     category: 'OOP',
     mentorName: 'Amina Sergazina · Soft Mentor',
     mentorInitials: '03',
