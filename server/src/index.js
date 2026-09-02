@@ -3,8 +3,7 @@ import cors from '@fastify/cors';
 import websocket from '@fastify/websocket';
 import { db } from './db.js';
 
-const fastify = Fastify({ logger: true });
-
+export const fastify = Fastify({ logger: false });
 await fastify.register(cors, {
   origin: '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS']
@@ -22,13 +21,11 @@ const stmts = {
   getUserByEmail: db.prepare('SELECT * FROM users WHERE email = ?'),
   getUserByToken: db.prepare('SELECT * FROM users WHERE token = ?'),
   insertUser: db.prepare(`
-    INSERT INTO users (id, email, name, initials, avatar_color, role, student_id, cohort, major, year, gpa, auth_provider, telegram_username, token)
-    VALUES (@id, @email, @name, @initials, @avatar_color, @role, @student_id, @cohort, @major, @year, @gpa, @auth_provider, @telegram_username, @token)
+    INSERT INTO users (id, email, name, initials, avatar_color, role, student_id, cohort, major, year, gpa, auth_provider, telegram_username, token, is_verified)
+    VALUES (@id, @email, @name, @initials, @avatar_color, @role, @student_id, @cohort, @major, @year, @gpa, @auth_provider, @telegram_username, @token, @is_verified)
   `),
-
-  // Mentors
-  getMentors: db.prepare('SELECT * FROM mentors'),
-  resetMyMentor: db.prepare('UPDATE mentors SET is_your_mentor = 0'),
+  `),
+  getOtp: db.prepare('SELECT * FROM email_verifications WHERE email = ?'),
   setMyMentor: db.prepare('UPDATE mentors SET is_your_mentor = 1, assigned_mentees = assigned_mentees + 1, spots_left = MAX(0, spots_left - 1) WHERE id = ?'),
 
   // 1-on-1 Bookings & Meetings
@@ -149,9 +146,9 @@ fastify.get('/api/health', async () => {
 // AUTHENTICATION & SSO APIS
 // -------------------------------------------------------------
 
-// List available accounts for quick-switching in demo/testing
-fastify.get('/api/auth/users', async () => {
-  const users = stmts.getUsers.all();
+// -------------------------------------------------------------
+// AUTHENTICATION & EMAIL OTP APIS
+// -------------------------------------------------------------
   return users.map(u => ({
     id: u.id,
     email: u.email,
@@ -166,9 +163,9 @@ fastify.get('/api/auth/users', async () => {
     gpa: u.gpa,
     authProvider: u.auth_provider,
     telegramUsername: u.telegram_username,
+    isVerified: Boolean(u.is_verified),
     token: u.token
   }));
-});
 
 // Microsoft 365 / AITU SSO Authentication
 fastify.post('/api/auth/sso', async (request, reply) => {
@@ -181,7 +178,6 @@ fastify.post('/api/auth/sso', async (request, reply) => {
   let user = stmts.getUserByEmail.get(normalizedEmail);
 
   if (!user) {
-    // Auto-provision user account for @astanait.edu.kz
     const id = `usr-${Date.now()}`;
     const nameParts = normalizedEmail.split('@')[0].split('.');
     const displayName = nameParts.map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' ');
@@ -203,12 +199,11 @@ fastify.post('/api/auth/sso', async (request, reply) => {
       gpa: '4.00',
       auth_provider: 'microsoft',
       telegram_username: null,
-      token: `tok-${Date.now()}-${id}`
+      token: `tok-${Date.now()}-${id}`,
+      is_verified: 1
     };
 
     stmts.insertUser.run(newUser);
-    user = newUser;
-  }
 
   broadcast('USER_AUTHENTICATED', { userId: user.id, name: user.name, role: user.role });
   return {
@@ -227,11 +222,11 @@ fastify.post('/api/auth/sso', async (request, reply) => {
       gpa: user.gpa,
       authProvider: user.auth_provider,
       telegramUsername: user.telegram_username,
+      isVerified: Boolean(user.is_verified),
       token: user.token
     }
   };
 });
-
 // Telegram WebApp Authentication
 fastify.post('/api/auth/telegram', async (request) => {
   const { telegramUser } = request.body || {};
@@ -792,13 +787,12 @@ fastify.post('/api/reports', async (request) => {
 // Start Fastify Server
 const start = async () => {
   try {
-    const port = process.env.PORT || 5000;
+    const port = process.env.PORT || 5001;
     const host = process.env.HOST || '0.0.0.0';
     await fastify.listen({ port: Number(port), host });
     console.log(`Server listening on http://${host}:${port}`);
   } catch (err) {
     fastify.log.error(err);
-    process.exit(1);
   }
 };
 

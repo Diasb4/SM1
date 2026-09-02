@@ -21,6 +21,7 @@ export const MenteeProfileView: React.FC = () => {
   const {
     currentUser,
     openAuthModal,
+    logout,
     myMentor,
     setSelectedMentorDetail,
     setRole,
@@ -233,12 +234,8 @@ export const MenteeProfileView: React.FC = () => {
 
       {/* Sign Out Button */}
       <button
-        onClick={() => {
-          if (confirm('Switch to Soft Mentor role demo?')) {
-            setRole('mentor');
-          }
-        }}
-        className="w-full bg-white hover:bg-rose-50 border border-rose-100 text-rose-600 font-bold py-3.5 px-4 rounded-2xl flex items-center justify-center gap-2 text-xs shadow-soft transition-colors mt-1"
+        onClick={logout}
+        className="w-full bg-white hover:bg-rose-50 border border-rose-100 text-rose-600 font-bold py-3.5 px-4 rounded-2xl flex items-center justify-center gap-2 text-xs shadow-soft transition-colors mt-1 cursor-pointer"
       >
         <LogOut className="w-4 h-4" />
         <span>{t.profile.signOut}</span>

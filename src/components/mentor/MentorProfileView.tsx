@@ -15,7 +15,7 @@ import {
 import { Language } from '../../i18n/translations';
 
 export const MentorProfileView: React.FC = () => {
-  const { setRole, language, setLanguage, themeMode, setThemeMode, t } = useApp();
+  const { currentUser, openAuthModal, logout, setRole, language, setLanguage, themeMode, setThemeMode, t } = useApp();
   const [isEditing, setIsEditing] = useState(false);
   const [tagline, setTagline] = useState('Your campus navigator. Debate nerd, terrible at chess.');
 
@@ -28,26 +28,34 @@ export const MentorProfileView: React.FC = () => {
   return (
     <div className="flex flex-col gap-4 pb-6">
       {/* Title */}
-      <div className="pt-2">
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900">{t.profile.title}</h1>
-        <p className="text-xs text-slate-500 font-medium mt-0.5">How mentees see you</p>
+      <div className="pt-2 flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">{t.profile.title}</h1>
+          <p className="text-xs text-slate-500 font-medium mt-0.5">How mentees see you</p>
+        </div>
+        <button
+          onClick={openAuthModal}
+          className="text-xs text-purple-600 font-bold bg-purple-50 px-3 py-1.5 rounded-xl border border-purple-200 hover:bg-purple-100 transition-colors"
+        >
+          Сменить аккаунт
+        </button>
       </div>
 
       {/* Main Mentor Card */}
       <div className="bg-white rounded-3xl p-5 border border-slate-100 shadow-soft">
         <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-full bg-purple-100 text-purple-700 font-bold text-lg flex items-center justify-center border-2 border-purple-200 shadow-xs">
-            AB
+          <div className={`w-14 h-14 rounded-2xl ${currentUser.avatarColor} font-bold text-lg flex items-center justify-center shadow-xs`}>
+            {currentUser.initials}
           </div>
 
           <div className="flex-1 min-w-0">
-            <h2 className="text-base font-bold text-slate-900 truncate">Aizhan Beibarys</h2>
-            <p className="text-xs text-slate-500 font-medium mt-0.5">
-              Software Engineering · 3rd year
+            <h2 className="text-base font-bold text-slate-900 truncate">{currentUser.name}</h2>
+            <p className="text-xs text-slate-500 font-mono mt-0.5 truncate">
+              {currentUser.email}
             </p>
             <div className="flex items-center gap-1.5 flex-wrap mt-2">
-              <span className="bg-purple-50 text-purple-700 border border-purple-200 text-[10px] font-bold px-2.5 py-0.5 rounded-full">
-                Soft Mentor
+              <span className="bg-purple-50 text-purple-700 border border-purple-200 text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase">
+                {currentUser.role}
               </span>
               <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-semibold px-2.5 py-0.5 rounded-full">
                 Provisioned by DSEW
@@ -175,12 +183,8 @@ export const MentorProfileView: React.FC = () => {
 
       {/* Sign Out Button */}
       <button
-        onClick={() => {
-          if (confirm('Switch back to Mentee view?')) {
-            setRole('mentee');
-          }
-        }}
-        className="w-full bg-white hover:bg-rose-50 border border-rose-100 text-rose-600 font-bold py-3.5 px-4 rounded-2xl flex items-center justify-center gap-2 text-xs shadow-soft transition-colors mt-1"
+        onClick={logout}
+        className="w-full bg-white hover:bg-rose-50 border border-rose-100 text-rose-600 font-bold py-3.5 px-4 rounded-2xl flex items-center justify-center gap-2 text-xs shadow-soft transition-colors mt-1 cursor-pointer"
       >
         <LogOut className="w-4 h-4" />
         <span>{t.profile.signOut}</span>

@@ -1,4 +1,3 @@
-import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
@@ -12,15 +11,71 @@ if (!fs.existsSync(dataDir)) {
 }
 
 const dbPath = path.join(dataDir, 'mentorship.db');
-export const db = new Database(dbPath);
 
-// Enable WAL mode & foreign keys
-db.pragma('journal_mode = WAL');
-db.pragma('synchronous = NORMAL');
-db.pragma('foreign_keys = ON');
+// Universal SQLite Loader (better-sqlite3 with fallback to node:sqlite)
+let db;
+try {
+  const { default: Database } = await import('better-sqlite3');
+  db = new Database(dbPath);
+  db.pragma('journal_mode = WAL');
+  db.pragma('synchronous = NORMAL');
+  db.pragma('foreign_keys = ON');
+} catch {
+  // Built-in Node 22+ DatabaseSync fallback
+  const { DatabaseSync } = await import('node:sqlite');
+  const nativeDb = new DatabaseSync(dbPath);
+  try {
+    nativeDb.exec('PRAGMA journal_mode = WAL;');
+    nativeDb.exec('PRAGMA synchronous = NORMAL;');
+    nativeDb.exec('PRAGMA foreign_keys = ON;');
+  } catch {}
+
+  // Adapter to match better-sqlite3 API interface
+  db = {
+    exec: (sql) => nativeDb.exec(sql),
+    pragma: (sql) => {
+      try { return nativeDb.exec(`PRAGMA ${sql};`); } catch {}
+    },
+    prepare: (sql) => {
+      const stmt = nativeDb.prepare(sql);
+      return {
+        all: (...params) => {
+          if (params.length === 1 && typeof params[0] === 'object' && params[0] !== null && !Array.isArray(params[0])) {
+            return stmt.all(params[0]);
+          }
+          return stmt.all(...params);
+        },
+        get: (...params) => {
+          if (params.length === 1 && typeof params[0] === 'object' && params[0] !== null && !Array.isArray(params[0])) {
+            return stmt.get(params[0]);
+          }
+          return stmt.get(...params);
+        },
+        run: (...params) => {
+          if (params.length === 1 && typeof params[0] === 'object' && params[0] !== null && !Array.isArray(params[0])) {
+            return stmt.run(params[0]);
+          }
+          return stmt.run(...params);
+        }
+      };
+    }
+  };
+}
+
+export { db };
 
 // Initialize database schema
 db.exec(`
+  -- Email OTP Verifications table
+  CREATE TABLE IF NOT EXISTS email_verifications (
+    email TEXT PRIMARY KEY,
+    code TEXT NOT NULL,
+    role TEXT DEFAULT 'mentee',
+    expires_at INTEGER NOT NULL,
+    attempts INTEGER DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+
   -- Users & Accounts table (SSO & Telegram auth)
   CREATE TABLE IF NOT EXISTS users (
     id TEXT PRIMARY KEY,
@@ -34,9 +89,10 @@ db.exec(`
     major TEXT,
     year TEXT,
     gpa TEXT,
-    auth_provider TEXT DEFAULT 'microsoft',
+    auth_provider TEXT DEFAULT 'email_otp',
     telegram_username TEXT,
     token TEXT,
+    is_verified INTEGER DEFAULT 1,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
 
@@ -191,26 +247,13 @@ db.exec(`
   );
 `);
 
-// Safe migrations for preexisting databases
-try {
-  db.prepare("ALTER TABLE chat_messages ADD COLUMN room_id TEXT DEFAULT 'room-cohort'").run();
-} catch {}
-
-try {
-  db.prepare("ALTER TABLE chat_messages ADD COLUMN attachment_data TEXT").run();
-} catch {}
-
-try {
-  db.prepare("ALTER TABLE one_on_one_bookings ADD COLUMN format TEXT DEFAULT 'offline'").run();
-} catch {}
-
-try {
-  db.prepare("ALTER TABLE one_on_one_bookings ADD COLUMN teams_link TEXT").run();
-} catch {}
-
-try {
-  db.prepare("ALTER TABLE hard_lectures ADD COLUMN checkin_token TEXT").run();
-} catch {}
+// Safe column migrations
+try { db.prepare("ALTER TABLE chat_messages ADD COLUMN room_id TEXT DEFAULT 'room-cohort'").run(); } catch {}
+try { db.prepare("ALTER TABLE chat_messages ADD COLUMN attachment_data TEXT").run(); } catch {}
+try { db.prepare("ALTER TABLE one_on_one_bookings ADD COLUMN format TEXT DEFAULT 'offline'").run(); } catch {}
+try { db.prepare("ALTER TABLE one_on_one_bookings ADD COLUMN teams_link TEXT").run(); } catch {}
+try { db.prepare("ALTER TABLE hard_lectures ADD COLUMN checkin_token TEXT").run(); } catch {}
+try { db.prepare("ALTER TABLE users ADD COLUMN is_verified INTEGER DEFAULT 1").run(); } catch {}
 
 // Performance Indexes
 db.exec(`
@@ -223,18 +266,16 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_stories_created ON stories(created_at);
 `);
 
-// -------------------------------------------------------------
-// SEED INITIAL USERS (AITU SSO & Telegram)
-// -------------------------------------------------------------
+// Seed Initial Users
 const userCount = db.prepare('SELECT count(*) as c FROM users').get().c;
 if (userCount === 0) {
   const insertUser = db.prepare(`
     INSERT INTO users (
       id, email, name, initials, avatar_color, role, student_id,
-      cohort, major, year, gpa, auth_provider, telegram_username, token
+      cohort, major, year, gpa, auth_provider, telegram_username, token, is_verified
     ) VALUES (
       @id, @email, @name, @initials, @avatar_color, @role, @student_id,
-      @cohort, @major, @year, @gpa, @auth_provider, @telegram_username, @token
+      @cohort, @major, @year, @gpa, @auth_provider, @telegram_username, @token, @is_verified
     )
   `);
 
@@ -253,7 +294,8 @@ if (userCount === 0) {
       gpa: '3.85',
       auth_provider: 'microsoft',
       telegram_username: 'birzhan_aitu',
-      token: 'tok-student-254977'
+      token: 'tok-student-254977',
+      is_verified: 1
     },
     {
       id: 'usr-mentor',
@@ -269,7 +311,8 @@ if (userCount === 0) {
       gpa: '3.90',
       auth_provider: 'microsoft',
       telegram_username: 'aizhan_mentor',
-      token: 'tok-mentor-aizhan'
+      token: 'tok-mentor-aizhan',
+      is_verified: 1
     },
     {
       id: 'usr-tutor',
@@ -285,7 +328,8 @@ if (userCount === 0) {
       gpa: '3.96',
       auth_provider: 'microsoft',
       telegram_username: 'ayan_calculus',
-      token: 'tok-tutor-ayan'
+      token: 'tok-tutor-ayan',
+      is_verified: 1
     },
     {
       id: 'usr-dsew',
@@ -301,7 +345,8 @@ if (userCount === 0) {
       gpa: 'N/A',
       auth_provider: 'microsoft',
       telegram_username: 'aitu_dsew_bot',
-      token: 'tok-dsew-staff'
+      token: 'tok-dsew-staff',
+      is_verified: 1
     }
   ];
 
@@ -310,9 +355,7 @@ if (userCount === 0) {
   }
 }
 
-// -------------------------------------------------------------
-// SEED CHAT ROOMS
-// -------------------------------------------------------------
+// Seed Chat Rooms
 const roomCount = db.prepare('SELECT count(*) as c FROM chat_rooms').get().c;
 if (roomCount === 0) {
   const insertRoom = db.prepare(`
@@ -348,9 +391,7 @@ if (roomCount === 0) {
   });
 }
 
-// -------------------------------------------------------------
-// SEED MENTORS
-// -------------------------------------------------------------
+// Seed Mentors
 const mentorCount = db.prepare('SELECT count(*) as c FROM mentors').get().c;
 if (mentorCount === 0) {
   const insertMentor = db.prepare(`
@@ -477,9 +518,7 @@ if (mentorCount === 0) {
   }
 }
 
-// -------------------------------------------------------------
-// SEED HARD LECTURES
-// -------------------------------------------------------------
+// Seed Hard Lectures
 const lectureCount = db.prepare('SELECT count(*) as c FROM hard_lectures').get().c;
 if (lectureCount === 0) {
   const insertLec = db.prepare(`
@@ -552,9 +591,7 @@ if (lectureCount === 0) {
   });
 }
 
-// -------------------------------------------------------------
-// SEED STORIES & POLLS
-// -------------------------------------------------------------
+// Seed Stories
 const storyCount = db.prepare('SELECT count(*) as c FROM stories').get().c;
 if (storyCount === 0) {
   const insertStory = db.prepare(`
@@ -604,9 +641,7 @@ if (storyCount === 0) {
   });
 }
 
-// -------------------------------------------------------------
-// SEED INITIAL CHAT MESSAGES
-// -------------------------------------------------------------
+// Seed Chat Messages
 const chatCount = db.prepare('SELECT count(*) as c FROM chat_messages').get().c;
 if (chatCount === 0) {
   const insertMsg = db.prepare(`

@@ -139,11 +139,15 @@ interface AppContextType {
   setIsSimulatingOffline: (val: boolean) => void;
 
   // Authentication & Users
+  isAuthenticated: boolean;
   currentUser: AuthUser;
   availableUsers: AuthUser[];
   isAuthModalOpen: boolean;
   openAuthModal: () => void;
   closeAuthModal: () => void;
+  sendEmailOtp: (email: string, role?: UserRole) => Promise<{ success: boolean; devCode?: string; message?: string }>;
+  verifyEmailOtp: (params: { email: string; code: string; name?: string; major?: string; cohort?: string; studentId?: string }) => Promise<void>;
+  updateUserProfile: (params: { name: string; major: string; cohort: string; studentId: string }) => Promise<void>;
   loginWithSSO: (email: string) => Promise<void>;
   loginWithTelegram: () => Promise<void>;
   switchUser: (user: AuthUser) => void;
@@ -305,6 +309,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // Auth & Current User
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
+    return localStorage.getItem('aitu_auth_token') !== null || localStorage.getItem('aitu_authenticated') === 'true';
+  });
   const [availableUsers, setAvailableUsers] = useState<AuthUser[]>(INITIAL_USERS);
   const [currentUser, setCurrentUser] = useState<AuthUser>(() => {
     const saved = localStorage.getItem('aitu_current_user');
@@ -561,6 +568,51 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const openAuthModal = () => setIsAuthModalOpen(true);
   const closeAuthModal = () => setIsAuthModalOpen(false);
 
+  const sendEmailOtp = async (email: string, role: UserRole = 'mentee') => {
+    const res = await fetch('/api/auth/send-otp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, role })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Ошибка отправки кода');
+    return data;
+  };
+
+  const verifyEmailOtp = async (params: { email: string; code: string; name?: string; major?: string; cohort?: string; studentId?: string }) => {
+    const res = await fetch('/api/auth/verify-otp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(params)
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Ошибка проверки кода');
+
+    setCurrentUser(data.user);
+    setRoleState(data.user.role);
+    setIsAuthenticated(true);
+    localStorage.setItem('aitu_auth_token', data.token);
+    localStorage.setItem('aitu_authenticated', 'true');
+    localStorage.setItem('aitu_current_user', JSON.stringify(data.user));
+
+    if (data.user.role === 'mentee') setMenteeView('home');
+    else if (data.user.role === 'hard_mentor') setHardMentorView('my_lectures');
+    else setMentorView('community');
+  };
+
+  const updateUserProfile = async (params: { name: string; major: string; cohort: string; studentId: string }) => {
+    const res = await fetch('/api/auth/profile', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: currentUser.id, ...params })
+    });
+    const data = await res.json();
+    if (data.user) {
+      setCurrentUser(prev => ({ ...prev, ...data.user }));
+      localStorage.setItem('aitu_current_user', JSON.stringify({ ...currentUser, ...data.user }));
+    }
+  };
+
   const loginWithSSO = async (email: string) => {
     const res = await fetch('/api/auth/sso', {
       method: 'POST',
@@ -571,6 +623,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const data = await res.json();
     setCurrentUser(data.user);
     setRoleState(data.user.role);
+    setIsAuthenticated(true);
+    localStorage.setItem('aitu_auth_token', data.user.token);
+    localStorage.setItem('aitu_authenticated', 'true');
+    localStorage.setItem('aitu_current_user', JSON.stringify(data.user));
     triggerConfetti();
   };
 
@@ -591,12 +647,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const data = await res.json();
     setCurrentUser(data.user);
     setRoleState(data.user.role);
+    setIsAuthenticated(true);
+    localStorage.setItem('aitu_auth_token', data.user.token);
+    localStorage.setItem('aitu_authenticated', 'true');
+    localStorage.setItem('aitu_current_user', JSON.stringify(data.user));
     triggerConfetti();
   };
 
   const switchUser = (user: AuthUser) => {
     setCurrentUser(user);
     setRoleState(user.role);
+    setIsAuthenticated(true);
+    localStorage.setItem('aitu_auth_token', user.token);
+    localStorage.setItem('aitu_authenticated', 'true');
+    localStorage.setItem('aitu_current_user', JSON.stringify(user));
     triggerHaptic('success');
     playSound('click');
     if (user.role === 'mentee') setMenteeView('home');
@@ -605,7 +669,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const logout = () => {
-    openAuthModal();
+    setIsAuthenticated(false);
+    localStorage.removeItem('aitu_auth_token');
+    localStorage.removeItem('aitu_authenticated');
+    playSound('pop');
+    triggerHaptic('medium');
   };
 
   const setRole = (newRole: UserRole) => {
@@ -1112,11 +1180,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setIsTelegramMode,
         isSimulatingOffline,
         setIsSimulatingOffline,
+        isAuthenticated,
         currentUser,
         availableUsers,
         isAuthModalOpen,
         openAuthModal,
         closeAuthModal,
+        sendEmailOtp,
+        verifyEmailOtp,
+        updateUserProfile,
         loginWithSSO,
         loginWithTelegram,
         switchUser,

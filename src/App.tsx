@@ -31,12 +31,14 @@ import { SkeletonView } from './components/system/SkeletonView';
 import { TasksEmptyView } from './components/system/TasksEmptyView';
 import { OfflineErrorView } from './components/system/OfflineErrorView';
 import { NotificationDrawer } from './components/common/NotificationDrawer';
+import { AuthScreen } from './components/auth/AuthScreen';
 
 // Modals
 import { StoryViewerModal } from './components/stories/StoryViewerModal';
 
 const AppContent: React.FC = () => {
   const {
+    isAuthenticated,
     role,
     menteeView,
     mentorView,
@@ -52,6 +54,10 @@ const AppContent: React.FC = () => {
   } = useApp();
 
   const renderContent = () => {
+    if (!isAuthenticated) {
+      return <AuthScreen />;
+    }
+
     if (isSimulatingOffline) {
       return <OfflineErrorView />;
     }
@@ -113,7 +119,7 @@ const AppContent: React.FC = () => {
     <DeviceFrame>
       <div className="flex-1 flex flex-col justify-between">
         <div className="flex-1">{renderContent()}</div>
-        <BottomNav />
+        {isAuthenticated && <BottomNav />}
       </div>
 
       {/* Global Modals */}

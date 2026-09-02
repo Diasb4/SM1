@@ -4,7 +4,7 @@ export type MenteeView = 'home' | 'mentors' | 'lectures' | 'guide' | 'events' | 
 export type MentorView = 'community' | 'stories' | 'new_story' | 'weekly_report' | 'events' | 'profile';
 export type HardMentorView = 'my_lectures' | 'scanner' | 'create_lecture' | 'analytics';
 
-export type AuthProviderType = 'microsoft' | 'telegram' | 'demo';
+export type AuthProviderType = 'microsoft' | 'telegram' | 'email_otp' | 'demo';
 
 export interface AuthUser {
   id: string;
@@ -20,6 +20,7 @@ export interface AuthUser {
   gpa: string;
   authProvider: AuthProviderType;
   telegramUsername?: string;
+  isVerified?: boolean;
   token: string;
 }
 
