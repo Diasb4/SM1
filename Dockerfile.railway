@@ -1,0 +1,25 @@
+FROM node:22-bookworm
+
+WORKDIR /app
+
+# 1. Copy package files and install frontend dependencies
+COPY package.json package-lock.json ./
+RUN npm ci
+
+# Copy all source files and compile Vite production bundle
+COPY . .
+RUN npm run build
+
+# 2. Install backend dependencies
+WORKDIR /app/server
+RUN npm install --omit=dev
+
+# Return to root
+WORKDIR /app
+
+# Railway dynamically assigns $PORT
+ENV NODE_ENV=production
+ENV HOST=0.0.0.0
+
+CMD ["node", "server/src/index.js"]
+

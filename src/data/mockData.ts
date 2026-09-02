@@ -1,4 +1,4 @@
-import { Mentor, Story, MenteeSignal, EventItem, ChatMessage, DSEWReport, HardLecture } from '../types';
+import { Mentor, Story, MenteeSignal, EventItem, ChatMessage, HardLecture } from '../types';
 
 export const INITIAL_HARD_LECTURES: HardLecture[] = [
   {
@@ -98,9 +98,9 @@ export const INITIAL_MENTORS: Mentor[] = [
     avatarColor: 'bg-purple-100 text-purple-700 border-purple-200',
     coverTag: 'cover · orientation week',
     coverGradient: 'from-purple-100/90 via-purple-50/50 to-white',
-    tagline: 'Your campus navigator. Debate nerd, terrible at chess.',
+    tagline: 'Твой навигатор по кампусу AITU. Дебаты и тайм-менеджмент.',
     major: 'Software Engineering',
-    year: '4th year',
+    year: '2nd year',
     cohort: 'Navigators · SE-1',
     assignedMentees: 21,
     maxMentees: 24,
@@ -108,14 +108,18 @@ export const INITIAL_MENTORS: Mentor[] = [
     isYourMentor: false,
     category: 'for_you',
     tags: ['Photography', 'Debate', 'Cycling', 'Coffee'],
-    about: 'I moved here from Shymkent in my first year and knew nobody. I get how loud the silence can be. My pool is small on purpose — we figure out campus, electives and life together, at your pace.',
+    about: 'Поступила в AITU и знаю, как сложно в первый месяц. Моя группа небольшая — разбираемся с кампусом, элективами и дедлайнами вместе без стресса.',
     languages: ['Қазақша', 'Русский', 'English'],
     hobbies: ['Photography', 'Debate', 'Cycling', 'Coffee'],
     onCampus: ['Debate Club lead', 'Orientation volunteer', 'Women in Tech'],
     achievements: ["Dean's List 2024", 'Best Peer Mentor 2025', 'Hackathon finalist ×3'],
     rating: 4.9,
     reviewCount: 16,
-    quote: 'Laugh when you can. It’s a cheap medicine 🧘'
+    quote: 'Смейся, когда можешь. Это бесплатное лекарство 🧘',
+    gpa: '3.94',
+    track: 'soft',
+    preferredFormat: 'both',
+    howIHelp: 'Помогу адаптироваться к университету, выбрать правильные элективы и подготовиться к защите лаб.'
   },
   {
     id: 'm-2',
@@ -124,7 +128,7 @@ export const INITIAL_MENTORS: Mentor[] = [
     avatarColor: 'bg-blue-100 text-blue-700 border-blue-200',
     coverTag: 'cover · demo day',
     coverGradient: 'from-blue-100/90 via-blue-50/50 to-white',
-    tagline: "Startup-brained. I'll drag you to a hackathon.",
+    tagline: 'Хакатоны, стартапы и портфолио с 1-го курса.',
     major: 'Cybersecurity',
     year: '3rd year',
     cohort: 'Innovators · CS-2',
@@ -134,13 +138,17 @@ export const INITIAL_MENTORS: Mentor[] = [
     isYourMentor: false,
     category: 'creative',
     tags: ['Product design', 'Hackathons', 'Synth music'],
-    about: 'Passionate about building cool tech products from scratch. If you want to crack hackathons, build a portfolio, and balance chill student life with high growth, join our pool!',
+    about: 'Обожаю запускать IT-проекты с нуля. Если хочешь выигрывать хакатоны, собрать сильное портфолио и совмещать учебу с кайфом — залетай в наш пул!',
     languages: ['Русский', 'English', '한국어'],
     hobbies: ['Product design', 'Hackathons', 'Synth music', 'Board games'],
     onCampus: ['AITU Innovation Hub Lead', 'Google Developer Group'],
     achievements: ['Decentrathon Winner 2024', 'Astana Hub Resident', 'Top GPA 3.92'],
     rating: 4.8,
-    reviewCount: 12
+    reviewCount: 12,
+    gpa: '3.92',
+    track: 'soft',
+    preferredFormat: 'offline',
+    howIHelp: 'Помогу найти команду на хакатоны, влиться в клубы кампуса и составить первое резюме.'
   },
   {
     id: 'm-3',
@@ -149,9 +157,9 @@ export const INITIAL_MENTORS: Mentor[] = [
     avatarColor: 'bg-emerald-100 text-emerald-700 border-emerald-200',
     coverTag: 'cover · saturday run',
     coverGradient: 'from-emerald-100/90 via-emerald-50/50 to-white',
-    tagline: 'Sport, sleep, then code. In that order.',
+    tagline: 'Спорт, сон, затем код. Именно в таком порядке.',
     major: 'Computer Science',
-    year: '4th year',
+    year: '2nd year',
     cohort: 'Athletes & Coders · CS-1',
     assignedMentees: 24,
     maxMentees: 24,
@@ -159,13 +167,17 @@ export const INITIAL_MENTORS: Mentor[] = [
     isYourMentor: false,
     category: 'sport',
     tags: ['Running', 'Football', 'Cooking'],
-    about: 'Keeping your mental & physical health sharp is the real secret to graduating with honors. Regular runs in Triathlon Park, morning coffee, and clean coding habits.',
+    about: 'Здоровый сон и спорт — главный секрет закрытия сессии без пересдач. Пробежки в Триатлон-парке, кофе по утрам и чистый код.',
     languages: ['Қазақша', 'Русский'],
     hobbies: ['Running', 'Football', 'Cooking', 'Calisthenics'],
     onCampus: ['AITU Football Captain', 'Peer Tutor (Calculus & Algo)'],
     achievements: ['Astana Marathon 21km finisher', 'Dean’s Honor Roll 2023'],
     rating: 5.0,
-    reviewCount: 22
+    reviewCount: 22,
+    gpa: '3.88',
+    track: 'hard',
+    preferredFormat: 'both',
+    howIHelp: 'Разбираю с первокурсниками сложные задачи по Calculus и структурам данных (C++).'
   },
   {
     id: 'm-4',
@@ -174,9 +186,9 @@ export const INITIAL_MENTORS: Mentor[] = [
     avatarColor: 'bg-purple-100 text-purple-700 border-purple-200',
     coverTag: 'cover · soft skills',
     coverGradient: 'from-purple-100/90 via-purple-50/50 to-white',
-    tagline: 'Laugh when you can. It’s a cheap medicine 🧘',
+    tagline: 'Смейся, когда можешь. Это бесплатное лекарство 🧘',
     major: 'Software Engineering',
-    year: '4th year',
+    year: '2nd year',
     cohort: 'Navigators · SE-1',
     assignedMentees: 21,
     maxMentees: 24,
@@ -184,14 +196,18 @@ export const INITIAL_MENTORS: Mentor[] = [
     isYourMentor: true,
     category: 'my_major',
     tags: ['Algorithms', 'Career advice', 'Mental wellbeing'],
-    about: 'Here to make sure you never feel alone with hard homework or university bureaucracy. We celebrate every small win and build strong bonds across senior and junior courses.',
+    about: 'Помогу, чтобы ты никогда не чувствовал себя потерянным перед дедлайнами или сложными лабами. Празднуем каждую маленькую победу!',
     languages: ['Қазақша', 'Русский', 'English'],
     hobbies: ['Gaming', 'Philosophy', 'Standup comedy', 'Tea brewing'],
     onCampus: ['AITU Student Council', 'Mentorship Program Core'],
     achievements: ['Best Peer Mentor Award', 'Excellence in Tutoring'],
     rating: 4.9,
     reviewCount: 19,
-    quote: 'Laugh when you can. It’s a cheap medicine 🧘'
+    quote: 'Смейся, когда можешь. Это бесплатное лекарство 🧘',
+    gpa: '3.95',
+    track: 'soft',
+    preferredFormat: 'both',
+    howIHelp: 'Отвечу на любые вопросы по кампусу, помогу не выгореть во время сессии и научу тайм-менеджменту.'
   }
 ];
 
@@ -388,30 +404,7 @@ export const INITIAL_CHAT_MESSAGES: ChatMessage[] = [
   }
 ];
 
-export const INITIAL_DSEW_REPORTS: DSEWReport[] = [
-  {
-    id: 'rep-1',
-    period: '7–20 May',
-    title: 'Healthy week',
-    status: 'Reviewed',
-    reportType: 'Psychologist',
-    highlights: 'Cohort adapted well to midterm prep. Group study session had 18 attendees.',
-    concerns: '2 students reported sleep deprivation due to algorithm deadlines.',
-    selectedAssignments: ['Exam-stress workshop'],
-    submittedAt: '21 May 2026'
-  },
-  {
-    id: 'rep-2',
-    period: '01 September',
-    title: 'Teambuilding',
-    status: 'Reviewed',
-    reportType: 'Assignments from DSEW',
-    highlights: '100% of cohort attended orientation and signed up for campus clubs.',
-    concerns: 'None reported.',
-    selectedAssignments: ['Extra study space'],
-    submittedAt: '03 September 2026'
-  }
-];
+
 
 export const MENTEE_AVATARS_LIST = [
   { initials: 'AZ', name: 'Aru Zhumabek', bg: 'bg-pink-100 text-pink-700' },

@@ -1,7 +1,15 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import websocket from '@fastify/websocket';
+import fastifyStatic from '@fastify/static';
+import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
 import { db } from './db.js';
+import { sendOtpEmail } from './mailer.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export const fastify = Fastify({ logger: false });
 await fastify.register(cors, {
@@ -10,6 +18,26 @@ await fastify.register(cors, {
 });
 
 await fastify.register(websocket);
+
+// Serve static frontend if dist/ exists (All-in-one Single Service Deploy on Railway / Render)
+const candidateDist1 = path.resolve(__dirname, '../../dist');
+const candidateDist2 = path.resolve(__dirname, '../dist');
+const distPath = fs.existsSync(candidateDist1) ? candidateDist1 : (fs.existsSync(candidateDist2) ? candidateDist2 : null);
+
+if (distPath) {
+  await fastify.register(fastifyStatic, {
+    root: distPath,
+    prefix: '/'
+  });
+
+  fastify.setNotFoundHandler((request, reply) => {
+    if (request.raw.url?.startsWith('/api') || request.raw.url?.startsWith('/ws')) {
+      return reply.status(404).send({ error: 'Endpoint not found' });
+    }
+    return reply.sendFile('index.html');
+  });
+  console.log(`[STATIC] Serving SPA from ${distPath}`);
+}
 
 // -------------------------------------------------------------
 // CACHED PREPARED STATEMENTS
@@ -24,8 +52,19 @@ const stmts = {
     INSERT INTO users (id, email, name, initials, avatar_color, role, student_id, cohort, major, year, gpa, auth_provider, telegram_username, token, is_verified)
     VALUES (@id, @email, @name, @initials, @avatar_color, @role, @student_id, @cohort, @major, @year, @gpa, @auth_provider, @telegram_username, @token, @is_verified)
   `),
+  updateUserProfile: db.prepare(`
+    UPDATE users SET name = ?, student_id = ?, major = ?, cohort = ?, initials = ? WHERE id = ?
   `),
+
+  // Email OTP Verifications
+  saveOtp: db.prepare('INSERT OR REPLACE INTO email_verifications (email, code, role, expires_at, attempts) VALUES (?, ?, ?, ?, 0)'),
   getOtp: db.prepare('SELECT * FROM email_verifications WHERE email = ?'),
+  deleteOtp: db.prepare('DELETE FROM email_verifications WHERE email = ?'),
+  incrementOtpAttempts: db.prepare('UPDATE email_verifications SET attempts = attempts + 1 WHERE email = ?'),
+
+  // Mentors
+  getMentors: db.prepare('SELECT * FROM mentors'),
+  resetMyMentor: db.prepare('UPDATE mentors SET is_your_mentor = 0'),
   setMyMentor: db.prepare('UPDATE mentors SET is_your_mentor = 1, assigned_mentees = assigned_mentees + 1, spots_left = MAX(0, spots_left - 1) WHERE id = ?'),
 
   // 1-on-1 Bookings & Meetings
@@ -91,14 +130,7 @@ const stmts = {
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `),
   updateMessageReactions: db.prepare('UPDATE chat_messages SET reactions_data = ? WHERE id = ?'),
-  getMessageById: db.prepare('SELECT * FROM chat_messages WHERE id = ?'),
-
-  // DSEW Reports
-  getReports: db.prepare('SELECT * FROM dsew_reports ORDER BY id DESC'),
-  insertReport: db.prepare(`
-    INSERT INTO dsew_reports (id, period, title, status, report_type, highlights, concerns, selected_assignments, submitted_at)
-    VALUES (?, ?, ?, 'Reviewed', ?, ?, ?, ?, ?)
-  `)
+  getMessageById: db.prepare('SELECT * FROM chat_messages WHERE id = ?')
 };
 
 // -------------------------------------------------------------
@@ -143,12 +175,173 @@ fastify.get('/api/health', async () => {
 });
 
 // -------------------------------------------------------------
-// AUTHENTICATION & SSO APIS
-// -------------------------------------------------------------
-
-// -------------------------------------------------------------
 // AUTHENTICATION & EMAIL OTP APIS
 // -------------------------------------------------------------
+
+// Send 6-Digit Verification Code to corporate email
+fastify.post('/api/auth/send-otp', async (request, reply) => {
+  const { email, role = 'mentee' } = request.body || {};
+  if (!email || !email.includes('@')) {
+    return reply.status(400).send({ error: 'Пожалуйста, введите валидный адрес почты' });
+  }
+
+  const normalizedEmail = email.trim().toLowerCase();
+
+  // Validate university domain
+  const isAituDomain = normalizedEmail.endsWith('@astanait.edu.kz') || normalizedEmail.endsWith('@aitu.edu.kz');
+  if (!isAituDomain && !normalizedEmail.includes('demo') && !normalizedEmail.includes('test')) {
+    return reply.status(400).send({
+      error: 'Регистрация разрешена только для корпоративной почты @astanait.edu.kz'
+    });
+  }
+
+  // Generate 6-digit random code
+  const code = Math.floor(100000 + Math.random() * 900000).toString();
+  const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes
+
+  stmts.saveOtp.run(normalizedEmail, code, role, expiresAt);
+
+  let mailResult = { previewUrl: null };
+  try {
+    mailResult = await sendOtpEmail(normalizedEmail, code, role);
+  } catch (mailErr) {
+    fastify.log.error(`[MAIL ERROR] Failed to send email to ${normalizedEmail}: ${mailErr.message}`);
+  }
+
+  fastify.log.info(`[AUTH OTP] Sent verification code ${code} to ${normalizedEmail}`);
+
+  return {
+    success: true,
+    message: `Код подтверждения успешно отправлен на ${normalizedEmail}`,
+    email: normalizedEmail,
+    previewUrl: mailResult?.previewUrl || null,
+    expiresInSeconds: 600
+  };
+});
+
+// Verify 6-Digit Code and Authenticate / Register User
+fastify.post('/api/auth/verify-otp', async (request, reply) => {
+  const { email, code, name, major, cohort, studentId } = request.body || {};
+  if (!email || !code) {
+    return reply.status(400).send({ error: 'Email и 6-значный код обязательны' });
+  }
+
+  const normalizedEmail = email.trim().toLowerCase();
+  const record = stmts.getOtp.get(normalizedEmail);
+
+  if (!record) {
+    return reply.status(400).send({ error: 'Код не найден или истек. Запросите новый код.' });
+  }
+
+  if (Date.now() > record.expires_at) {
+    stmts.deleteOtp.run(normalizedEmail);
+    return reply.status(400).send({ error: 'Срок действия кода истек (10 минут). Запросите новый код.' });
+  }
+
+  if (record.attempts >= 5) {
+    stmts.deleteOtp.run(normalizedEmail);
+    return reply.status(400).send({ error: 'Превышено число попыток ввода. Запросите новый код.' });
+  }
+
+  if (record.code !== code.trim()) {
+    stmts.incrementOtpAttempts.run(normalizedEmail);
+    return reply.status(400).send({ error: 'Неверный код подтверждения' });
+  }
+
+  // OTP verified successfully - clear it
+  stmts.deleteOtp.run(normalizedEmail);
+
+  // Retrieve existing user or provision a new one
+  let user = stmts.getUserByEmail.get(normalizedEmail);
+
+  if (!user) {
+    const id = `usr-${Date.now()}`;
+    const nameParts = normalizedEmail.split('@')[0].split('.');
+    const isNumeric = /^\d+$/.test(nameParts[0]);
+    const role = record.role || 'mentee';
+
+    const autoName = isNumeric
+      ? (role === 'mentor' ? `AITU Mentor (${nameParts[0]})` : (role === 'hard_mentor' ? `AITU Tutor (${nameParts[0]})` : `AITU Student (${nameParts[0]})`))
+      : nameParts.map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' ');
+
+    const displayName = name?.trim() || autoName;
+    const initials = isNumeric
+      ? (role === 'mentor' ? 'MN' : (role === 'hard_mentor' ? 'TR' : 'ST'))
+      : displayName.split(' ').map(p => p[0]).join('').substring(0, 2).toUpperCase() || 'ST';
+
+    const studentIdMatch = normalizedEmail.match(/^(\d+)/);
+    const resolvedStudentId = studentId || (studentIdMatch ? studentIdMatch[1] : `25${Math.floor(1000 + Math.random() * 9000)}`);
+
+    const colorsByRole = {
+      mentee: 'bg-blue-600 text-white',
+      mentor: 'bg-purple-600 text-white',
+      hard_mentor: 'bg-indigo-600 text-white'
+    };
+
+    const newUser = {
+      id,
+      email: normalizedEmail,
+      name: displayName,
+      initials,
+      avatar_color: colorsByRole[role] || 'bg-blue-600 text-white',
+      role,
+      student_id: resolvedStudentId,
+      cohort: cohort || (role === 'mentee' ? 'SE-2401' : 'Lead Mentors'),
+      major: major || 'Software Engineering',
+      year: role === 'mentee' ? '1st year' : '3rd year',
+      gpa: role === 'mentee' ? '3.85' : '3.94',
+      auth_provider: 'email_otp',
+      telegram_username: null,
+      token: `tok-${Date.now()}-${id}`,
+      is_verified: 1
+    };
+
+    stmts.insertUser.run(newUser);
+    user = newUser;
+  }
+
+  broadcast('USER_AUTHENTICATED', { userId: user.id, name: user.name, role: user.role });
+
+  return {
+    success: true,
+    token: user.token,
+    user: {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      initials: user.initials,
+      avatarColor: user.avatar_color,
+      role: user.role,
+      studentId: user.student_id,
+      cohort: user.cohort,
+      major: user.major,
+      year: user.year,
+      gpa: user.gpa,
+      authProvider: user.auth_provider,
+      telegramUsername: user.telegram_username,
+      isVerified: Boolean(user.is_verified),
+      token: user.token
+    }
+  };
+});
+
+// Update Profile Details
+fastify.post('/api/auth/profile', async (request, reply) => {
+  const { id, name, major, cohort, studentId } = request.body || {};
+  if (!id || !name) {
+    return reply.status(400).send({ error: 'id and name are required' });
+  }
+
+  const initials = name.split(' ').map(p => p[0]).join('').substring(0, 2).toUpperCase() || 'ST';
+  stmts.updateUserProfile.run(name, studentId || '254977', major || 'Software Engineering', cohort || 'SE-2401', initials, id);
+
+  const updated = stmts.getUserById.get(id);
+  return { success: true, user: updated };
+});
+
+// List available accounts for quick-switching in demo/testing
+fastify.get('/api/auth/users', async () => {
+  const users = stmts.getUsers.all();
   return users.map(u => ({
     id: u.id,
     email: u.email,
@@ -166,6 +359,7 @@ fastify.get('/api/health', async () => {
     isVerified: Boolean(u.is_verified),
     token: u.token
   }));
+});
 
 // Microsoft 365 / AITU SSO Authentication
 fastify.post('/api/auth/sso', async (request, reply) => {
@@ -204,6 +398,8 @@ fastify.post('/api/auth/sso', async (request, reply) => {
     };
 
     stmts.insertUser.run(newUser);
+    user = newUser;
+  }
 
   broadcast('USER_AUTHENTICATED', { userId: user.id, name: user.name, role: user.role });
   return {
@@ -747,47 +943,11 @@ fastify.post('/api/chat/messages/:id/react', async (request, reply) => {
   return { success: true, reactions };
 });
 
-// -------------------------------------------------------------
-// DSEW REPORTS
-// -------------------------------------------------------------
-fastify.get('/api/reports', async () => {
-  const rows = stmts.getReports.all();
-  return rows.map(r => ({
-    id: r.id,
-    period: r.period,
-    title: r.title,
-    status: r.status,
-    reportType: r.report_type,
-    highlights: r.highlights,
-    concerns: r.concerns,
-    selectedAssignments: JSON.parse(r.selected_assignments || '[]'),
-    submittedAt: r.submitted_at
-  }));
-});
-
-fastify.post('/api/reports', async (request) => {
-  const body = request.body;
-  const id = `rep-${Date.now()}`;
-  const dateStr = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-
-  stmts.insertReport.run(
-    id,
-    body.period || 'Current Period',
-    body.title || 'Weekly Report',
-    body.reportType || 'Assignments from DSEW',
-    body.highlights || '',
-    body.concerns || '',
-    JSON.stringify(body.selectedAssignments || []),
-    dateStr
-  );
-
-  return { success: true, id };
-});
 
 // Start Fastify Server
 const start = async () => {
   try {
-    const port = process.env.PORT || 5001;
+    const port = process.env.PORT || 5000;
     const host = process.env.HOST || '0.0.0.0';
     await fastify.listen({ port: Number(port), host });
     console.log(`Server listening on http://${host}:${port}`);

@@ -28,3 +28,4 @@ services:
       - aitu-mentorship-api
     environment:
       - NODE_ENV=production
+      - BACKEND_URL=http://aitu-mentorship-api:5000

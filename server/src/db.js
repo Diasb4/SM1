@@ -232,19 +232,6 @@ db.exec(`
     attachment_data TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
-
-  -- DSEW Reports table
-  CREATE TABLE IF NOT EXISTS dsew_reports (
-    id TEXT PRIMARY KEY,
-    period TEXT,
-    title TEXT,
-    status TEXT DEFAULT 'Reviewed',
-    report_type TEXT,
-    highlights TEXT,
-    concerns TEXT,
-    selected_assignments TEXT,
-    submitted_at TEXT
-  );
 `);
 
 // Safe column migrations
@@ -329,23 +316,6 @@ if (userCount === 0) {
       auth_provider: 'microsoft',
       telegram_username: 'ayan_calculus',
       token: 'tok-tutor-ayan',
-      is_verified: 1
-    },
-    {
-      id: 'usr-dsew',
-      email: 'dsew@astanait.edu.kz',
-      name: 'Department of Student Affairs (DSEW)',
-      initials: 'DS',
-      avatar_color: 'bg-emerald-600 text-white',
-      role: 'dsew_admin',
-      student_id: 'STAFF-001',
-      cohort: 'AITU Administration',
-      major: 'Student Support Center',
-      year: 'Staff',
-      gpa: 'N/A',
-      auth_provider: 'microsoft',
-      telegram_username: 'aitu_dsew_bot',
-      token: 'tok-dsew-staff',
       is_verified: 1
     }
   ];
@@ -605,10 +575,10 @@ if (storyCount === 0) {
   `);
 
   insertStory.run({
-    id: 's-dsew',
-    author_id: 'dsew',
-    author_name: 'AITU Student Affairs (DSEW)',
-    author_initials: 'DS',
+    id: 's-leads',
+    author_id: 'leads',
+    author_name: 'AITU Mentorship Community',
+    author_initials: 'MC',
     author_avatar_bg: 'bg-blue-600 text-white',
     type: 'poll',
     content: 'Нужна ли дополнительная консультация по Calculus 1 в эту субботу в C1.3.250?',

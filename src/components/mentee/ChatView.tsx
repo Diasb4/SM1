@@ -17,7 +17,8 @@ import {
   Flame,
   ThumbsUp,
   Heart,
-  Lightbulb
+  Lightbulb,
+  AlertCircle
 } from 'lucide-react';
 import { playSound } from '../../utils/audio';
 
@@ -43,6 +44,17 @@ export const ChatView: React.FC = () => {
   const [isSearching, setIsSearching] = useState(false);
   const [replyingTo, setReplyingTo] = useState<{ id: string; senderName: string; text: string } | null>(null);
   const [activeReactionMenuId, setActiveReactionMenuId] = useState<string | null>(null);
+  const [lastSentTime, setLastSentTime] = useState<number>(0);
+  const [floodWarning, setFloodWarning] = useState<string | null>(null);
+
+  // Quiet hours: 22:00 - 08:00
+  const currentHour = new Date().getHours();
+  const isQuietHours = currentHour >= 22 || currentHour < 8;
+
+  // Detect cheeky "do my homework for me" requests
+  const hasHomeworkSolicitation = useMemo(() => {
+    return /(реши|сделай|напиши)\s*(за меня|лабу|дз|задачу|тест)|(скинь|дай)\s*(ответы|решение|код)|реши лабу/i.test(inputText);
+  }, [inputText]);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -77,6 +89,17 @@ export const ChatView: React.FC = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputText.trim()) return;
+
+    // FOOLPROOF: Anti-flood protection
+    const now = Date.now();
+    if (now - lastSentTime < 2000) {
+      playSound('beep');
+      setFloodWarning('Не спамьте так быстро. Подождите 2 секунды перед следующим сообщением.');
+      setTimeout(() => setFloodWarning(null), 2500);
+      return;
+    }
+
+    setLastSentTime(now);
     sendMessage(inputText, replyingTo || undefined);
     setInputText('');
     setReplyingTo(null);
@@ -311,6 +334,34 @@ export const ChatView: React.FC = () => {
           <button onClick={() => setReplyingTo(null)} className="text-slate-400 hover:text-slate-600">
             <X className="w-3.5 h-3.5" />
           </button>
+        </div>
+      )}
+
+      {/* Flood Warning */}
+      {floodWarning && (
+        <div className="bg-rose-50 border-t border-rose-200 px-4 py-2 text-rose-700 text-xs font-bold flex items-center gap-2 animate-shake">
+          <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0" />
+          <span>{floodWarning}</span>
+        </div>
+      )}
+
+      {/* Cheeky Homework Solicitation Detector */}
+      {hasHomeworkSolicitation && (
+        <div className="bg-amber-50 border-t border-amber-200 px-4 py-2.5 text-amber-900 text-xs flex items-start gap-2 animate-fade-in">
+          <Lightbulb className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+          <span className="leading-snug text-[11px]">
+            <strong>Правило менторства:</strong> Ментор не пишет код и не решает лабы за тебя. Опиши, в чем конкретно концептуальная сложность или покажи свой код, чтобы ментор помог разобраться!
+          </span>
+        </div>
+      )}
+
+      {/* Quiet Hours Banner */}
+      {isQuietHours && (
+        <div className="bg-slate-900 text-slate-300 px-4 py-1.5 text-[10px] flex items-center justify-between border-t border-slate-800">
+          <span className="flex items-center gap-1.5 font-medium">
+            <span>🌙</span>
+            <span>Тихие часы (22:00 – 08:00) · Ментор отдыхает. Наставник ответит в рабочее время с 09:00.</span>
+          </span>
         </div>
       )}
 

@@ -58,7 +58,7 @@ export const MentorProfileView: React.FC = () => {
                 {currentUser.role}
               </span>
               <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-semibold px-2.5 py-0.5 rounded-full">
-                Provisioned by DSEW
+                AITU Certified Mentor
               </span>
             </div>
           </div>

@@ -1,7 +1,7 @@
-export type UserRole = 'mentee' | 'mentor' | 'hard_mentor' | 'dsew_admin';
+export type UserRole = 'mentee' | 'mentor' | 'hard_mentor';
 
 export type MenteeView = 'home' | 'mentors' | 'lectures' | 'guide' | 'events' | 'chat' | 'profile' | 'skeleton' | 'empty_tasks' | 'offline_error';
-export type MentorView = 'community' | 'stories' | 'new_story' | 'weekly_report' | 'events' | 'profile';
+export type MentorView = 'community' | 'stories' | 'new_story' | 'analytics' | 'events' | 'profile';
 export type HardMentorView = 'my_lectures' | 'scanner' | 'create_lecture' | 'analytics';
 
 export type AuthProviderType = 'microsoft' | 'telegram' | 'email_otp' | 'demo';
@@ -50,6 +50,10 @@ export interface Mentor {
   rating?: number;
   reviewCount?: number;
   availableSlots?: string[];
+  gpa?: string;
+  track?: 'soft' | 'hard';
+  preferredFormat?: 'both' | 'offline' | 'online';
+  howIHelp?: string;
 }
 
 export type SubjectCategory = 'Calculus' | 'Linear Algebra' | 'OOP & Java' | 'Algorithms & DSA' | 'Physics' | 'Discrete Math';
@@ -177,16 +181,14 @@ export interface ChatMessage {
   };
 }
 
-export interface DSEWReport {
+export interface MentorSessionNote {
   id: string;
-  period: string;
-  title: string;
-  status: 'Reviewed' | 'Pending' | 'Draft';
-  reportType: 'Psychologist' | 'Assignments from DSEW' | 'Needs attention (questions)';
-  highlights: string;
-  concerns: string;
-  selectedAssignments: string[];
-  submittedAt: string;
+  mentorId: string;
+  menteeName: string;
+  topic: string;
+  summary: string;
+  actionItems: string[];
+  dateStr: string;
 }
 
 export type MeetingFormat = 'offline' | 'online_teams';

@@ -10,7 +10,7 @@ import {
   EventItem,
   ChatMessage,
   ChatRoom,
-  DSEWReport,
+  MentorSessionNote,
   MenteeSignal,
   HardLecture,
   AuditoriumTier,
@@ -22,7 +22,6 @@ import {
   INITIAL_STORIES,
   INITIAL_EVENTS,
   INITIAL_CHAT_MESSAGES,
-  INITIAL_DSEW_REPORTS,
   MENTEE_SIGNALS,
   INITIAL_HARD_LECTURES
 } from '../data/mockData';
@@ -105,22 +104,6 @@ const INITIAL_USERS: AuthUser[] = [
     authProvider: 'microsoft',
     telegramUsername: 'ayan_calculus',
     token: 'tok-tutor-ayan'
-  },
-  {
-    id: 'usr-dsew',
-    email: 'dsew@astanait.edu.kz',
-    name: 'Department of Student Affairs (DSEW)',
-    initials: 'DS',
-    avatarColor: 'bg-emerald-600 text-white',
-    role: 'dsew_admin',
-    studentId: 'STAFF-001',
-    cohort: 'AITU Administration',
-    major: 'Student Support Center',
-    year: 'Staff',
-    gpa: 'N/A',
-    authProvider: 'microsoft',
-    telegramUsername: 'aitu_dsew_bot',
-    token: 'tok-dsew-staff'
   }
 ];
 
@@ -145,7 +128,7 @@ interface AppContextType {
   isAuthModalOpen: boolean;
   openAuthModal: () => void;
   closeAuthModal: () => void;
-  sendEmailOtp: (email: string, role?: UserRole) => Promise<{ success: boolean; devCode?: string; message?: string }>;
+  sendEmailOtp: (email: string, role?: UserRole) => Promise<{ success: boolean; devCode?: string; previewUrl?: string | null; message?: string }>;
   verifyEmailOtp: (params: { email: string; code: string; name?: string; major?: string; cohort?: string; studentId?: string }) => Promise<void>;
   updateUserProfile: (params: { name: string; major: string; cohort: string; studentId: string }) => Promise<void>;
   loginWithSSO: (email: string) => Promise<void>;
@@ -226,9 +209,9 @@ interface AppContextType {
   // Signals (Mentor)
   menteeSignals: MenteeSignal[];
 
-  // DSEW Reports (Mentor)
-  reports: DSEWReport[];
-  submitReport: (report: Omit<DSEWReport, 'id' | 'status' | 'submittedAt'>) => void;
+  // Mentor Session Notes
+  mentorNotes: MentorSessionNote[];
+  saveMentorSessionNote: (note: Omit<MentorSessionNote, 'id'>) => void;
 
   // Notifications
   notifications: NotificationItem[];
@@ -380,9 +363,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [menteeSignals] = useState<MenteeSignal[]>(MENTEE_SIGNALS);
 
-  const [reports, setReports] = useState<DSEWReport[]>(() => {
-    const saved = localStorage.getItem('aitu_reports');
-    return saved ? JSON.parse(saved) : INITIAL_DSEW_REPORTS;
+  const [mentorNotes, setMentorNotes] = useState<MentorSessionNote[]>(() => {
+    const saved = localStorage.getItem('aitu_mentor_notes');
+    return saved ? JSON.parse(saved) : [];
   });
 
   // Notifications
@@ -510,8 +493,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [chatMessages]);
 
   useEffect(() => {
-    localStorage.setItem('aitu_reports', JSON.stringify(reports));
-  }, [reports]);
+    localStorage.setItem('aitu_mentor_notes', JSON.stringify(mentorNotes));
+  }, [mentorNotes]);
 
   // Telegram WebApp auto-detection
   useEffect(() => {
@@ -569,89 +552,109 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const closeAuthModal = () => setIsAuthModalOpen(false);
 
   const sendEmailOtp = async (email: string, role: UserRole = 'mentee') => {
-    const res = await fetch('/api/auth/send-otp', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, role })
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Ошибка отправки кода');
-    return data;
+    try {
+      const res = await fetch('/api/auth/send-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, role })
+      });
+      const data = await res.json().catch(() => ({ error: 'Не удалось получить ответ от сервера' }));
+      if (!res.ok) throw new Error(data.error || 'Ошибка отправки кода');
+      return data;
+    } catch (err: any) {
+      throw new Error(err.message || 'Ошибка соединения с сервером авторизации');
+    }
   };
 
   const verifyEmailOtp = async (params: { email: string; code: string; name?: string; major?: string; cohort?: string; studentId?: string }) => {
-    const res = await fetch('/api/auth/verify-otp', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(params)
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Ошибка проверки кода');
+    try {
+      const res = await fetch('/api/auth/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(params)
+      });
+      const data = await res.json().catch(() => ({ error: 'Не удалось получить ответ от сервера' }));
+      if (!res.ok) throw new Error(data.error || 'Ошибка проверки кода');
 
-    setCurrentUser(data.user);
-    setRoleState(data.user.role);
-    setIsAuthenticated(true);
-    localStorage.setItem('aitu_auth_token', data.token);
-    localStorage.setItem('aitu_authenticated', 'true');
-    localStorage.setItem('aitu_current_user', JSON.stringify(data.user));
+      setCurrentUser(data.user);
+      setRoleState(data.user.role);
+      setIsAuthenticated(true);
+      localStorage.setItem('aitu_auth_token', data.token);
+      localStorage.setItem('aitu_authenticated', 'true');
+      localStorage.setItem('aitu_current_user', JSON.stringify(data.user));
 
-    if (data.user.role === 'mentee') setMenteeView('home');
-    else if (data.user.role === 'hard_mentor') setHardMentorView('my_lectures');
-    else setMentorView('community');
+      if (data.user.role === 'mentee') setMenteeView('home');
+      else if (data.user.role === 'hard_mentor') setHardMentorView('my_lectures');
+      else setMentorView('community');
+    } catch (err: any) {
+      throw new Error(err.message || 'Ошибка проверки кода подтверждения');
+    }
   };
 
   const updateUserProfile = async (params: { name: string; major: string; cohort: string; studentId: string }) => {
-    const res = await fetch('/api/auth/profile', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: currentUser.id, ...params })
-    });
-    const data = await res.json();
-    if (data.user) {
-      setCurrentUser(prev => ({ ...prev, ...data.user }));
-      localStorage.setItem('aitu_current_user', JSON.stringify({ ...currentUser, ...data.user }));
+    try {
+      const res = await fetch('/api/auth/profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: currentUser.id, ...params })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (data.user) {
+        setCurrentUser(prev => ({ ...prev, ...data.user }));
+        localStorage.setItem('aitu_current_user', JSON.stringify({ ...currentUser, ...data.user }));
+      }
+    } catch {
+      // ignore
     }
   };
 
   const loginWithSSO = async (email: string) => {
-    const res = await fetch('/api/auth/sso', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email })
-    });
-    if (!res.ok) throw new Error('Ошибка входа через SSO');
-    const data = await res.json();
-    setCurrentUser(data.user);
-    setRoleState(data.user.role);
-    setIsAuthenticated(true);
-    localStorage.setItem('aitu_auth_token', data.user.token);
-    localStorage.setItem('aitu_authenticated', 'true');
-    localStorage.setItem('aitu_current_user', JSON.stringify(data.user));
-    triggerConfetti();
+    try {
+      const res = await fetch('/api/auth/sso', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      });
+      const data = await res.json().catch(() => ({ error: 'Не удалось получить ответ от сервера SSO' }));
+      if (!res.ok) throw new Error(data.error || 'Ошибка входа через SSO');
+      setCurrentUser(data.user);
+      setRoleState(data.user.role);
+      setIsAuthenticated(true);
+      localStorage.setItem('aitu_auth_token', data.user.token);
+      localStorage.setItem('aitu_authenticated', 'true');
+      localStorage.setItem('aitu_current_user', JSON.stringify(data.user));
+      triggerConfetti();
+    } catch (err: any) {
+      throw new Error(err.message || 'Ошибка авторизации через SSO');
+    }
   };
 
   const loginWithTelegram = async () => {
-    const tgUser = (window as any).Telegram?.WebApp?.initDataUnsafe?.user || {
-      id: 254977,
-      first_name: 'Birzhan',
-      last_name: 'Zhanbolatuly',
-      username: 'birzhan_aitu'
-    };
+    try {
+      const tgUser = (window as any).Telegram?.WebApp?.initDataUnsafe?.user || {
+        id: 254977,
+        first_name: 'Birzhan',
+        last_name: 'Zhanbolatuly',
+        username: 'birzhan_aitu'
+      };
 
-    const res = await fetch('/api/auth/telegram', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ telegramUser: tgUser })
-    });
-    if (!res.ok) throw new Error('Ошибка входа через Telegram');
-    const data = await res.json();
-    setCurrentUser(data.user);
-    setRoleState(data.user.role);
-    setIsAuthenticated(true);
-    localStorage.setItem('aitu_auth_token', data.user.token);
-    localStorage.setItem('aitu_authenticated', 'true');
-    localStorage.setItem('aitu_current_user', JSON.stringify(data.user));
-    triggerConfetti();
+      const res = await fetch('/api/auth/telegram', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ telegramUser: tgUser })
+      });
+      const data = await res.json().catch(() => ({ error: 'Не удалось получить ответ от сервера Telegram' }));
+      if (!res.ok) throw new Error(data.error || 'Ошибка входа через Telegram');
+      setCurrentUser(data.user);
+      setRoleState(data.user.role);
+      setIsAuthenticated(true);
+      localStorage.setItem('aitu_auth_token', data.user.token);
+      localStorage.setItem('aitu_authenticated', 'true');
+      localStorage.setItem('aitu_current_user', JSON.stringify(data.user));
+      triggerConfetti();
+    } catch (err: any) {
+      throw new Error(err.message || 'Ошибка входа через Telegram');
+    }
   };
 
   const switchUser = (user: AuthUser) => {
@@ -1132,22 +1135,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, [wsInstance, activeChatRoomId, currentUser.name]);
 
-  // DSEW Reports
-  const submitReport = (reportData: Omit<DSEWReport, 'id' | 'status' | 'submittedAt'>) => {
-    const newRep: DSEWReport = {
-      ...reportData,
-      id: `rep-${Date.now()}`,
-      status: 'Reviewed',
-      submittedAt: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+  // Mentor Session Notes
+  const saveMentorSessionNote = (noteData: Omit<MentorSessionNote, 'id'>) => {
+    const newNote: MentorSessionNote = {
+      ...noteData,
+      id: `note-${Date.now()}`
     };
-    setReports(prev => [newRep, ...prev]);
-
-    fetch('/api/reports', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(reportData)
-    }).catch(() => {});
-
+    setMentorNotes(prev => {
+      const updated = [newNote, ...prev];
+      localStorage.setItem('aitu_mentor_notes', JSON.stringify(updated));
+      return updated;
+    });
     triggerHaptic('success');
     playSound('success');
     triggerConfetti();
@@ -1246,8 +1244,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         sendTypingSignal,
         typingUsers,
         menteeSignals,
-        reports,
-        submitReport,
+        mentorNotes,
+        saveMentorSessionNote,
         notifications,
         notificationCount,
         isNotificationOpen,

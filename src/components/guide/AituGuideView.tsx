@@ -646,10 +646,10 @@ export const AituGuideView: React.FC = () => {
 
               <div className="py-2.5 flex items-center justify-between">
                 <div>
-                  <p className="font-bold text-slate-900">DSEW Wellbeing & Psychologist</p>
-                  <p className="text-[11px] text-slate-500">Confidential appointments</p>
+                  <p className="font-bold text-slate-900">Student Wellbeing & Support</p>
+                  <p className="text-[11px] text-slate-500">Confidential peer appointments</p>
                 </div>
-                <span className="font-mono text-[11px] text-purple-600 font-semibold">dsew@astanait.edu.kz</span>
+                <span className="font-mono text-[11px] text-purple-600 font-semibold">wellbeing@astanait.edu.kz</span>
               </div>
             </div>
           </div>

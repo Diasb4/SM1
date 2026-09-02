@@ -102,17 +102,53 @@ export const MentorDetailModal: React.FC = () => {
             </div>
             <p className="text-xs text-slate-600 mt-1 leading-relaxed">{mentor.tagline}</p>
 
-            <div className="flex items-center gap-2 flex-wrap mt-3">
-              <span className="bg-slate-100 text-slate-700 text-[10px] font-semibold px-2.5 py-1 rounded-lg flex items-center gap-1">
+            <div className="flex items-center gap-1.5 flex-wrap mt-3">
+              <span className="bg-slate-100 text-slate-800 text-[10px] font-bold px-2.5 py-1 rounded-lg flex items-center gap-1">
                 <GraduationCap className="w-3 h-3 text-slate-500" />
-                <span>{mentor.major} · {mentor.year}</span>
+                <span>{mentor.year === '2nd year' ? '2 курс (Основной состав)' : '3 курс (Тьютор)'}</span>
               </span>
 
-              <span className="bg-blue-50 text-blue-700 text-[10px] font-semibold px-2.5 py-1 rounded-lg flex items-center gap-1">
+              {mentor.gpa && (
+                <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-mono font-bold px-2.5 py-1 rounded-lg">
+                  GPA {mentor.gpa}
+                </span>
+              )}
+
+              <span className="bg-purple-50 text-purple-700 border border-purple-200 text-[10px] font-bold px-2.5 py-1 rounded-lg">
+                {mentor.track === 'hard' ? 'Hard Academic Tutor' : 'Soft Mentor'}
+              </span>
+
+              <span className="bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-semibold px-2.5 py-1 rounded-lg flex items-center gap-1">
                 <Users className="w-3 h-3 text-blue-600" />
                 <span>{mentor.cohort} · {mentor.assignedMentees}/{mentor.maxMentees}</span>
               </span>
             </div>
+          </div>
+
+          {/* How I Help Section */}
+          {mentor.howIHelp && (
+            <div className="bg-purple-50/80 border border-purple-100 rounded-2xl p-3.5 flex flex-col gap-1.5">
+              <div className="flex items-center gap-1.5 text-xs font-bold text-purple-950">
+                <Sparkles className="w-3.5 h-3.5 text-purple-600" />
+                <span>Чем помогу первокурсникам:</span>
+              </div>
+              <p className="text-xs text-purple-900 leading-relaxed font-medium">
+                {mentor.howIHelp}
+              </p>
+              <div className="text-[10px] text-purple-700 font-mono mt-1">
+                Формат: {mentor.preferredFormat === 'offline' ? 'Офлайн в C1 коворкинге' : mentor.preferredFormat === 'online' ? 'Онлайн в Microsoft Teams' : 'Коворкинг C1 + MS Teams'}
+              </div>
+            </div>
+          )}
+
+          {/* Mentorship Code & Boundaries */}
+          <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-3 flex flex-col gap-1 text-[11px] text-slate-600 leading-snug">
+            <span className="font-bold text-slate-800 text-xs flex items-center gap-1.5">
+              🛡️ Регламент наставничества:
+            </span>
+            <span>• Ментор <strong>не решает лабораторные</strong> за тебя, а помогает разобраться в сложных концепциях.</span>
+            <span>• Тихие часы: не писать в личные сообщения после 22:00.</span>
+            <span>• Встречи проводятся только в коворкинге C1 кампуса или в Teams.</span>
           </div>
 
           {/* 1-on-1 Advisory Booking Highlight Card */}
@@ -122,15 +158,15 @@ export const MentorDetailModal: React.FC = () => {
                 <Calendar className="w-4 h-4" />
               </div>
               <div>
-                <h4 className="text-xs font-bold text-purple-950">{t.mentorCatalog.oneOnOneAdvisory}</h4>
-                <p className="text-[10px] text-purple-700">20 min private advisory session</p>
+                <h4 className="text-xs font-bold text-purple-950">Запись на 1-on-1 встречу</h4>
+                <p className="text-[10px] text-purple-700">20 минут личной консультации</p>
               </div>
             </div>
             <button
               onClick={handleBookOneOnOne}
-              className="bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold px-3 py-2 rounded-xl shadow-xs active:scale-95 transition-all"
+              className="bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold px-3 py-2 rounded-xl shadow-xs active:scale-95 transition-all cursor-pointer"
             >
-              Book Slot
+              Записаться
             </button>
           </div>
 

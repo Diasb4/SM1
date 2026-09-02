@@ -22,7 +22,7 @@ import { HardMentorLecturesView } from './components/lectures/HardMentorLectures
 // Mentor Views (Soft Mentorship)
 import { MentorCommunityView } from './components/mentor/MentorCommunityView';
 import { MentorStoriesView } from './components/mentor/MentorStoriesView';
-import { WeeklyReportView } from './components/mentor/WeeklyReportView';
+import { MentorAnalyticsView } from './components/mentor/MentorAnalyticsView';
 import { MentorEventsView } from './components/mentor/MentorEventsView';
 import { MentorProfileView } from './components/mentor/MentorProfileView';
 
@@ -104,8 +104,8 @@ const AppContent: React.FC = () => {
         return <MentorCommunityView />;
       case 'stories':
         return <MentorStoriesView />;
-      case 'weekly_report':
-        return <WeeklyReportView />;
+      case 'analytics':
+        return <MentorAnalyticsView />;
       case 'events':
         return <MentorEventsView />;
       case 'profile':
